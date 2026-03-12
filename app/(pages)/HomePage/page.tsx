@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   Search,
   SlidersHorizontal,
@@ -17,6 +17,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { allProducts, colorOptions } from "@/app/data/products";
 import UserTitleBar from "@/app/components/UserTitleBar";
+import { supabase } from "@/utils/supabase/supabase_client";
 
 export default function HomePage() {
   const [view, setView] = useState("grid");
@@ -26,19 +27,35 @@ export default function HomePage() {
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [products, setProducts] = useState<any[]>([]);
   const itemsPerPage = 12;
   const router = useRouter();
 
   const categories = ["All", ...new Set(allProducts.map((p) => p.category))];
 
-  // Filter and sort products
+  // Filter and sort products+/.
+  useEffect(() => {
+    const getProducts = async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .limit(12);
+      if (error) {
+        console.error(error.message);
+      }
+      if (data) {
+        setProducts(data);
+      }
+    };
+    getProducts();
+  }, []);
+
   const filteredProducts = useMemo(() => {
-    let filtered = allProducts;
+    let tempProducts = products ? [...products] : [];
 
     // Search filter
     if (searchQuery) {
-      filtered = filtered.filter(
+      tempProducts = tempProducts.filter(
         (p) =>
           p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
           p.category.toLowerCase().includes(searchQuery.toLowerCase()),
@@ -47,17 +64,19 @@ export default function HomePage() {
 
     // Category filter
     if (selectedCategory !== "All") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
+      tempProducts = tempProducts.filter(
+        (p) => p.category === selectedCategory,
+      );
     }
 
     // Price range filter
-    filtered = filtered.filter(
+    tempProducts = tempProducts.filter(
       (p) => p.price >= priceRange[0] && p.price <= priceRange[1],
     );
 
     // Color filter
     if (selectedColors.length > 0) {
-      filtered = filtered.filter((p) =>
+      tempProducts = tempProducts.filter((p) =>
         p.colors.some((color) => selectedColors.includes(color)),
       );
     }
@@ -65,31 +84,44 @@ export default function HomePage() {
     // Sort
     switch (sortBy) {
       case "price-low":
-        filtered.sort((a, b) => a.price - b.price);
+        tempProducts.sort((a, b) => a.price - b.price);
         break;
       case "price-high":
-        filtered.sort((a, b) => b.price - a.price);
+        tempProducts.sort((a, b) => b.price - a.price);
         break;
       case "rating":
-        filtered.sort((a, b) => b.rating - a.rating);
+        tempProducts.sort((a, b) => b.rating - a.rating);
         break;
       case "popular":
-        filtered.sort((a, b) => b.reviews - a.reviews);
+        tempProducts.sort((a, b) => b.reviews - a.reviews);
         break;
       default:
         // featured - keep original order
         break;
     }
 
-    return filtered;
-  }, [searchQuery, selectedCategory, priceRange, selectedColors, sortBy]);
+    return tempProducts;
+  }, [
+    products,
+    searchQuery,
+    selectedCategory,
+    priceRange,
+    selectedColors,
+    sortBy,
+  ]);
 
   // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
   const paginatedProducts = filteredProducts.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage,
   );
+
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filteredProducts.length]);
 
   const toggleColor = (color: string) => {
     setSelectedColors((prev) =>

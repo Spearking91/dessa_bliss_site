@@ -120,10 +120,10 @@ const CartPage = () => {
                       </div>
                     </td>
                     <td className="py-4 px-6 text-right">
-                      ${item.product.price.toFixed(2)}
+                      GH₵{item.product.price.toFixed(2)}
                     </td>
                     <td className="py-4 px-6 text-right font-medium">
-                      ${(item.product.price * item.quantity).toFixed(2)}
+                      GH₵{(item.product.price * item.quantity).toFixed(2)}
                     </td>
                     <td className="py-4 px-6">
                       <div className="flex justify-center">
@@ -179,24 +179,24 @@ const CartPage = () => {
             <div className="space-y-3 text-sm">
               <div className="flex justify-between">
                 <span className="text-gray-500">Subtotal</span>
-                <span>${subtotal.toFixed(2)}</span>
+                <span>GH₵{subtotal.toFixed(2)}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Shipping</span>
                 <span>
-                  {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                  {shipping === 0 ? "Free" : `GH₵${shipping.toFixed(2)}`}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Tax</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>GH₵{tax.toFixed(2)}</span>
               </div>
 
               <div className="my-3" />
 
               <div className="flex justify-between font-bold text-base">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>GH₵{total.toFixed(2)}</span>
               </div>
             </div>
 

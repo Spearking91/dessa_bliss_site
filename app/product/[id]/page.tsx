@@ -11,6 +11,7 @@ import {
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { useCart } from "@/app/context/CartContent";
+import { useToast } from "@/app/context/ToastContext";
 
 type Product = (typeof allProducts)[0];
 
@@ -52,6 +53,7 @@ export default function ProductDetailPage({
   const [selectedColor, setSelectedColor] = useState<string | null>(null);
   const router = useRouter();
   const { addToCart } = useCart();
+  const { showToast } = useToast();
 
   const handleBuyNow = () => {
     if (!product) return;
@@ -155,6 +157,7 @@ export default function ProductDetailPage({
     );
   const handleAddToCart = () => {
     if (product) addToCart(product, quantity);
+    showToast("Item added to cart successfully", "success");
   };
   const incrementQuantity = () => {
     if (quantity < product.stockCount) setQuantity((prev) => prev + 1);

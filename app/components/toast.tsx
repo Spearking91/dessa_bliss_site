@@ -15,7 +15,7 @@ const variantClasses: Record<NonNullable<ToastVariant["variant"]>, string> = {
 
 const Toast = ({ title, description, variant = "default" }: ToastVariant) => {
   return (
-    <div className="toast toast-top toast-end">
+    <div className="toast toast-top toast-end z-[100]">
       <div className={`alert ${variantClasses[variant]} flex flex-col`}>
         <span className="font-bold text-md">{title}</span>
         {description && <span>{description}</span>}

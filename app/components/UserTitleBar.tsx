@@ -38,7 +38,7 @@ const UserTitleBar = () => {
   const homeNavPaths = ["/LandingPage"];
   const showHomeNav = homeNavPaths.includes(pathname);
 
-  const hideBar = ["/auth"].includes(pathname);
+  const hideBar = ["/auth", "/auth/pending-confirmation"].includes(pathname);
 
   // Define paths where the search bar should be hidden
   const hideSearchBarOnPaths = ["/Profile", "/CartPage", "/LandingPage"];

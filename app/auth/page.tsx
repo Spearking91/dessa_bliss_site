@@ -16,6 +16,7 @@ import { useToast } from "../context/ToastContext";
 
 export default function Auth() {
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("+233");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
@@ -80,6 +81,7 @@ export default function Auth() {
       options: {
         data: {
           email: email,
+          phone: phone,
         },
       },
     });
@@ -168,6 +170,27 @@ export default function Auth() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="user@example.com"
+                    required
+                  />
+                  <label htmlFor="signup-email" className="font-semibold">
+                    Phone
+                  </label>
+                  <input
+                    className="input w-full rounded-lg"
+                    id="signup-phone"
+                    type="tel"
+                    value={phone}
+                    maxLength={13}
+                    onChange={(e) => {
+                      const prefix = "+233";
+                      // Prevent user from deleting the prefix
+                      if (e.target.value.length < prefix.length) {
+                        setPhone(prefix);
+                      } else {
+                        setPhone(e.target.value);
+                      }
+                    }}
+                    placeholder="+233-23-456-7890"
                     required
                   />
                 </div>

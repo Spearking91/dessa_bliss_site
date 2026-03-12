@@ -1,16 +1,14 @@
 "use client";
 import { useState } from "react";
-import {
-  CreditCard,
-  Building,
-  Apple,
-  LockIcon,
-  ChevronsRight,
-} from "lucide-react";
+import { CreditCard, Building, Apple, LockIcon, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContent";
-import Toast from "@/app/components/toast";
+
 import { RadioGroup, RadioGroupItem } from "@radix-ui/react-radio-group";
+import { useToast } from "@/app/context/ToastContext";
+import { useAuth } from "@/app/auth/AuthContext";
+import { supabase } from "@/utils/supabase/supabase_client";
+import { usePaystackPayment } from "react-paystack";
 
 type AddressFormData = {
   firstName: string;
@@ -29,35 +27,81 @@ type PaymentMethod = "credit-card" | "paypal" | "apple-pay";
 const CheckoutPage = () => {
   const router = useRouter();
   const { cart, getCartTotal, clearCart } = useCart();
+  const { showToast } = useToast();
+  const { user } = useAuth();
 
   const [addressData, setAddressData] = useState<AddressFormData>({
     firstName: "",
     lastName: "",
-    email: "",
+    email: user?.email || "",
     phone: "",
     address: "",
     city: "",
     state: "",
     zipCode: "",
-    country: "United States",
+    country: "Ghana",
   });
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("credit-card");
   const [billingIsSameAsShipping, setBillingIsSameAsShipping] = useState(true);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAddressChange = (
-    e: React.ChangeEvent<HTMLinputElement | HTMLSelectElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setAddressData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const subtotal = getCartTotal();
+  const shipping = subtotal > 100 ? 0 : 10;
+  const tax = subtotal * 0.07; // 7% tax for demo
+  const total = subtotal + shipping + tax;
 
-    // Basic form validation
-    const requiredFields = [
+  const verifyOnServer = async (ref: string) => {
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error("Supabase URL is not configured.");
+      }
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/verify-payment`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reference: ref }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.verified) {
+        throw new Error(data.error || "Payment verification failed on server.");
+      }
+      return true;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : "An unknown verification error occurred.";
+      showToast(errorMessage, "error");
+      console.error("Verification Error:", error);
+      return false;
+    }
+  };
+
+  const initializePayment = usePaystackPayment({
+    publicKey: process.env.NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY!,
+    email: addressData.email, // This will be overridden
+    currency: "GHS",
+    amount: Math.round(total * 100),
+    reference: "", // This will be overridden
+  });
+
+  const handleFinalizeOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsProcessing(true);
+
+    const requiredFields: (keyof AddressFormData)[] = [
       "firstName",
       "lastName",
       "email",
@@ -66,46 +110,113 @@ const CheckoutPage = () => {
       "state",
       "zipCode",
       "country",
+      "phone",
     ];
-    const missingFields = requiredFields.filter(
-      (field) => !addressData[field as keyof AddressFormData],
-    );
+    const missingFields = requiredFields.filter((field) => !addressData[field]);
 
     if (missingFields.length > 0) {
-      <Toast
-        variant="destructive"
-        title="Missing information"
-        description={`Please fill in all required fields: ${missingFields.join(", ")}`}
-      />;
+      showToast(
+        "Missing information",
+        "error",
+        `Please fill in all required fields: ${missingFields.join(", ")}`,
+      );
+      setIsProcessing(false);
       return;
     }
 
-    // In a real app, this would send the order to a backend/payment gateway
-    // For demo purposes, just show success and clear cart
-    setTimeout(() => {
-      clearCart();
-      router.push("/order-confirmation", {
-        state: {
-          orderNumber: `ORD-${Math.floor(Math.random() * 1000000)}`,
-          orderedProducts: [...cart],
-        },
-      });
-    }, 1500);
+    const reference = `dessa_${Math.random().toString(36).substring(2)}`;
+    const { error: insertError } = await supabase.from("payments").insert({
+      user_id: user?.id,
+      amount: total,
+      reference: reference,
+      status: "pending",
+      metadata: {
+        cart,
+        shipping_address: addressData,
+      },
+    });
 
-    <Toast
-      title="Processing order..."
-      description="Your order is being processed. Please wait."
-    />;
+    if (insertError) {
+      showToast(
+        "Database error",
+        "error",
+        "Could not create payment record. Please try again.",
+      );
+      console.error("Supabase insert error:", insertError);
+      setIsProcessing(false);
+      return;
+    }
+
+    // const onSuccess = async (paystackResponse: { reference: string }) => {
+    //   showToast("Payment successful, verifying...", "info");
+    //   const isVerified = await verifyOnServer(paystackResponse.reference);
+
+    //   if (isVerified) {
+    //     showToast("Payment Verified and Order Completed!", "success");
+    //     clearCart();
+    //     // Redirect to the order confirmation page with the payment reference
+    //     router.push(`/order-confirmation?ref=${paystackResponse.reference}`);
+    //   } else {
+    //     showToast(
+    //       "Payment verification failed.",
+    //       "error",
+    //       "Please contact support with your payment reference.",
+    //     );
+    //   }
+    //   setIsProcessing(false);
+    // };
+
+    // const onClose = () => {
+    //   showToast("Payment window closed.", "warning");
+    //   setIsProcessing(false);
+    // };
+
+    // ...
+    const onSuccess = async (paystackResponse: { reference: string }) => {
+      showToast("Payment successful, verifying...", "info");
+      // 1. This function is called...
+      const isVerified = await verifyOnServer(paystackResponse.reference);
+
+      // 2. The redirect ONLY happens if isVerified is true.
+      if (isVerified) {
+        showToast("Payment Verified and Order Completed!", "success");
+        clearCart();
+        router.push(`/order-confirmation?ref=${paystackResponse.reference}`); // <-- The redirect
+      } else {
+        // 3. If verification fails, this block runs instead, and no redirect occurs.
+        showToast(
+          "Payment verification failed.",
+          "error",
+          "Please contact support with your payment reference.",
+        );
+      }
+      setIsProcessing(false);
+    };
+    // ...
+    const onClose = () => {
+      showToast("Payment window closed.", "warning");
+      setIsProcessing(false);
+    };
+
+    initializePayment({
+      onSuccess,
+      onClose,
+      reference,
+      email: addressData.email,
+      amount: Math.round(total * 100),
+    });
   };
 
-  const subtotal = getCartTotal();
-  const shipping = subtotal > 100 ? 0 : 10;
-  const tax = subtotal * 0.07; // 7% tax for demo
-  const total = subtotal + shipping + tax;
-
-  if (cart.length === 0) {
-    router.push("/cart");
-    return null;
+  if (cart.length === 0 && !isProcessing) {
+    if (typeof window !== "undefined") {
+      router.push("/CartPage");
+    }
+    return (
+      <div className="container min-h-[70vh] py-16 text-center">
+        <h1 className="text-2xl font-bold mb-4">Your Cart is Empty</h1>
+        <p className="mb-8">Redirecting you to your cart...</p>
+      </div>
+    );
   }
 
   return (
@@ -114,7 +225,7 @@ const CheckoutPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
-          <form onSubmit={handleSubmit} className="space-y-8">
+          <form onSubmit={handleFinalizeOrder} className="space-y-8">
             {/* Shipping Information */}
             <div>
               <h2 className="text-xl font-bold mb-4">Shipping Information</h2>
@@ -127,6 +238,7 @@ const CheckoutPage = () => {
                       name="firstName"
                       value={addressData.firstName}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
@@ -137,6 +249,7 @@ const CheckoutPage = () => {
                       name="lastName"
                       value={addressData.lastName}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
@@ -148,6 +261,7 @@ const CheckoutPage = () => {
                       type="email"
                       value={addressData.email}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
@@ -159,6 +273,7 @@ const CheckoutPage = () => {
                       type="tel"
                       value={addressData.phone}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
@@ -169,6 +284,7 @@ const CheckoutPage = () => {
                       name="address"
                       value={addressData.address}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
@@ -179,30 +295,31 @@ const CheckoutPage = () => {
                       name="city"
                       value={addressData.city}
                       onChange={handleAddressChange}
+                      className="input w-full"
                       required
                     />
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label htmlFor="state">State/Province *</label>
-                      <input
-                        id="state"
-                        name="state"
-                        value={addressData.state}
-                        onChange={handleAddressChange}
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label htmlFor="zipCode">ZIP / Postal Code *</label>
-                      <input
-                        id="zipCode"
-                        name="zipCode"
-                        value={addressData.zipCode}
-                        onChange={handleAddressChange}
-                        required
-                      />
-                    </div>
+                  <div>
+                    <label htmlFor="state">State/Province *</label>
+                    <input
+                      id="state"
+                      name="state"
+                      value={addressData.state}
+                      onChange={handleAddressChange}
+                      className="input w-full"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="zipCode">Zip/Postal Code *</label>
+                    <input
+                      id="zipCode"
+                      name="zipCode"
+                      value={addressData.zipCode}
+                      onChange={handleAddressChange}
+                      className="input w-full"
+                      required
+                    />
                   </div>
                   <div>
                     <label htmlFor="country">Country *</label>
@@ -211,16 +328,10 @@ const CheckoutPage = () => {
                       name="country"
                       value={addressData.country}
                       onChange={handleAddressChange}
-                      className="w-full border border-gray-300 rounded-md px-3 py-2"
+                      className="w-full border border-gray-300 rounded-md px-3 py-2 bg-base-100"
                       required
                     >
-                      <option value="United States">United States</option>
-                      <option value="Canada">Canada</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="Australia">Australia</option>
-                      <option value="Germany">Germany</option>
-                      <option value="France">France</option>
-                      <option value="Japan">Japan</option>
+                      <option value="Ghana">Ghana</option>
                     </select>
                   </div>
                 </div>
@@ -248,54 +359,10 @@ const CheckoutPage = () => {
                       className="flex items-center"
                     >
                       <CreditCard className="mr-2 h-4 w-4" />
-                      Credit / Debit Card
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2 rounded-lg border border-gray-200 p-4">
-                    <RadioGroupItem value="paypal" id="payment-paypal" />
-                    <label
-                      htmlFor="payment-paypal"
-                      className="flex items-center"
-                    >
-                      <Building className="mr-2 h-4 w-4" />
-                      PayPal
-                    </label>
-                  </div>
-
-                  <div className="flex items-center space-x-2 rounded-lg border border-gray-200 p-4">
-                    <RadioGroupItem value="apple-pay" id="payment-apple-pay" />
-                    <label
-                      htmlFor="payment-apple-pay"
-                      className="flex items-center"
-                    >
-                      <Apple className="mr-2 h-4 w-4" />
-                      Apple Pay
+                      Pay with Card / Mobile Money
                     </label>
                   </div>
                 </RadioGroup>
-
-                {paymentMethod === "credit-card" && (
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <label htmlFor="card-number">Card Number</label>
-                      <input
-                        id="card-number"
-                        placeholder="0000 0000 0000 0000"
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label htmlFor="expiry">Expiry Date</label>
-                        <input id="expiry" placeholder="MM/YY" />
-                      </div>
-                      <div>
-                        <label htmlFor="cvc">CVC</label>
-                        <input id="cvc" placeholder="CVC" />
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="mt-6">
                   <div className="flex items-center space-x-2">
@@ -352,7 +419,7 @@ const CheckoutPage = () => {
                         </div>
                       </div>
                       <p className="font-medium">
-                        ${(item.product.price * item.quantity).toFixed(2)}
+                        GH₵{(item.product.price * item.quantity).toFixed(2)}
                       </p>
                     </div>
                   ))}
@@ -363,22 +430,22 @@ const CheckoutPage = () => {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Subtotal</span>
-                    <span>${subtotal.toFixed(2)}</span>
+                    <span>GH₵{subtotal.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Shipping</span>
                     <span>
-                      {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                      {shipping === 0 ? "Free" : `GH₵${shipping.toFixed(2)}`}
                     </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-500">Tax</span>
-                    <span>${tax.toFixed(2)}</span>
+                    <span>GH₵{tax.toFixed(2)}</span>
                   </div>
                   {/* <Separator className="my-2" /> */}
                   <div className="flex justify-between font-bold text-base">
                     <span>Total</span>
-                    <span>${total.toFixed(2)}</span>
+                    <span>GH₵{total.toFixed(2)}</span>
                   </div>
                 </div>
 
@@ -388,8 +455,17 @@ const CheckoutPage = () => {
                     Your payment information is encrypted and secure.
                   </div>
 
-                  <button type="submit" className="btn btn-primary w-full">
-                    Place Order <ChevronsRight className="ml-2 h-4 w-4" />
+                  <button
+                    type="submit"
+                    className="btn btn-primary w-full"
+                    disabled={isProcessing}
+                  >
+                    {isProcessing ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    {isProcessing
+                      ? "Processing..."
+                      : `Pay GH₵${total.toFixed(2)}`}
                   </button>
                 </div>
               </div>
@@ -408,7 +484,7 @@ const CheckoutPage = () => {
                     <span className="ml-2 truncate">{item.product.name}</span>
                   </div>
                   <span className="font-medium">
-                    ${(item.product.price * item.quantity).toFixed(2)}
+                    GH₵{(item.product.price * item.quantity).toFixed(2)}
                   </span>
                 </div>
               ))}
@@ -418,17 +494,17 @@ const CheckoutPage = () => {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-500">Subtotal</span>
-                  <span>${subtotal.toFixed(2)}</span>
+                  <span>GH₵{subtotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Shipping</span>
                   <span>
-                    {shipping === 0 ? "Free" : `$${shipping.toFixed(2)}`}
+                    {shipping === 0 ? "Free" : `GH₵${shipping.toFixed(2)}`}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-500">Tax</span>
-                  <span>${tax.toFixed(2)}</span>
+                  <span>GH₵{tax.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -436,7 +512,7 @@ const CheckoutPage = () => {
 
               <div className="flex justify-between font-bold">
                 <span>Total</span>
-                <span>${total.toFixed(2)}</span>
+                <span>GH₵{total.toFixed(2)}</span>
               </div>
             </div>
           </div>
