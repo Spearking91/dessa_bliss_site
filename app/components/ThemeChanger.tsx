@@ -10,6 +10,8 @@ const themes = [
   "valentine",
   "aqua",
   "cupcake",
+  "caramellatte",
+  "abyss"
 ];
 
 interface props {

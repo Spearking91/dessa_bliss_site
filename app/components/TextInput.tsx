@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeClosed } from "lucide-react";
+import { Eye, EyeOff } from "lucide-react";
 
 interface props {
   placeholder: string;
@@ -10,7 +10,6 @@ interface props {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
-`  `;
 
 export default function TextInput({
   Icon,
@@ -22,28 +21,31 @@ export default function TextInput({
   const [isVisible, setIsVisible] = useState(false);
 
   return (
-    <div className="w-full m-1">
-      <p style={{ fontWeight: "bold" }} children={title} />
-      <div className="flex items-center w-full p-2 border border-solid rounded-xl gap-2">
-        <Icon className="text-gray-300" />
+    <div className="form-control w-full">
+      <label className="label">
+        <span className="label-text font-bold">{title}</span>
+      </label>
+      <label className="input input-bordered flex items-center gap-2">
+        <Icon className="text-gray-400" />
         <input
-          className="w-full outline-none bg-transparent"
           type={
             title === "Password" ? (isVisible ? "text" : "password") : "text"
           }
+          className="grow bg-transparent"
           placeholder={placeholder}
           value={value}
           onChange={onChange}
         />
         {title === "Password" && (
           <button
-            className="btn-circle"
+            type="button"
+            className="btn btn-ghost btn-circle btn-sm"
             onClick={() => setIsVisible(!isVisible)}
           >
-            {isVisible ? <EyeClosed /> : <Eye />}
+            {isVisible ? <EyeOff /> : <Eye />}
           </button>
         )}
-      </div>
+      </label>
     </div>
   );
 }

@@ -54,48 +54,59 @@ export default function Auth() {
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-    if (error) {
-      setLoading(false);
-      showToast(error.message, "warning");
-      if (error.message === "Email not confirmed") {
-        router.push(
-          `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
-        );
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) {
+        showToast(error.message, "warning");
+        if (error.message === "Email not confirmed") {
+          router.push(
+            `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
+          );
+        }
+      } else {
+        showToast("Sign in successful", "success");
+        // Redirect handled by useEffect
       }
-    } else {
+    } catch (error) {
+      showToast("An unexpected error occurred during sign-in.", "error");
+    } finally {
       setLoading(false);
-      showToast("Sign in successful", "success");
-      router.push("/Homepage");
     }
   };
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          email: email,
-          phone: phone,
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}`,
+          data: {
+            email: email,
+            phone: phone,
+            role: "user",
+          },
         },
-      },
-    });
-    setLoading(false);
-    if (error) {
-      showToast(error.message, "error");
-    } else if (data.session) {
-      // Auto-confirmed, user is logged in.
-      router.push("/Homepage");
-    } else {
-      // Email confirmation needed.
-      router.push(
-        `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
-      );
+      });
+      if (error) {
+        showToast(error.message, "error");
+      } else if (data.session) {
+        // Auto-confirmed, user is logged in.
+        // Redirect handled by useEffect
+      } else {
+        // Email confirmation needed.
+        router.push(
+          `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
+        );
+      }
+    } catch (error) {
+      showToast("An unexpected error occurred during sign-up.", "error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -172,7 +183,7 @@ export default function Auth() {
                     placeholder="user@example.com"
                     required
                   />
-                  <label htmlFor="signup-email" className="font-semibold">
+                  <label htmlFor="signup-phone" className="font-semibold">
                     Phone
                   </label>
                   <input
@@ -218,9 +229,9 @@ export default function Auth() {
                   ) : null}
                   Create Account
                 </button>
-                <p className="text-xs text-muted-foreground text-center">
+                {/* <p className="text-xs text-muted-foreground text-center">
                   The first account created automatically becomes Super Admin.
-                </p>
+                </p> */}
               </form>
             </TabsContent>
           </Tabs>

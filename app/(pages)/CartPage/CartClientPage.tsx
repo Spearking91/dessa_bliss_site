@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContent";
 import Link from "next/link";
 import { useAuth } from "@/app/auth/AuthContext";
-import { useToast } from "./ToastContext";
+import { useToast } from "@/app/context/ToastContext";
 
-
-const CartPage = () => {
+const CartClientPage = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart } =
@@ -80,8 +79,7 @@ const CartPage = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center">
                         <img
-                          // src={item.product.images[0]}
-                          src={item.product.image || "/logo2.png"}
+                          src={item.product.images[0]}
                           alt={item.product.name}
                           className="h-16 w-16 object-cover rounded-md mr-4"
                         />
@@ -247,4 +245,4 @@ const CartPage = () => {
   );
 };
 
-export default CartPage;
+export default CartClientPage;

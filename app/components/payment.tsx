@@ -66,7 +66,7 @@ const PaystackButton = ({
   return (
     <button
       onClick={() => initializePayment(onSuccess, onClose)}
-      className="bg-green-500 text-white px-4 py-2 rounded"
+      className="btn btn-success"
     >
       Pay Now
     </button>

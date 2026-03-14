@@ -1,6 +1,5 @@
 "use client";
 
-import { base } from "next-video/dist/utils/logger.js";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -46,9 +45,7 @@ export const CustomButton = ({
   const router = useRouter();
   return (
     <button
-      className={`btn ${colorClass} rounded-full ${
-        full && " w-full"
-      } border-base`}
+      className={`btn ${colorClass} rounded-full ${full && " w-full"}`}
       onClick={
         onClick || (onNavigate ? () => router.push(onNavigate) : undefined)
       }
