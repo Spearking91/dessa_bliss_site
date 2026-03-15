@@ -10,22 +10,12 @@ import {
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { useCart } from "@/app/context/CartContent";
-import { useToast } from "@/app/context/ToastContext";
-import { supabase } from "@/utils/supabase/supabase_client";
 import Loading from "@/app/loading";
-
-interface Product {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  colors: string[];
-  rating: number | null;
-  reviews: number | null;
-  image: string | null;
-  trending: boolean | null;
-  created_at: string;
-}
+import {
+  getProductById,
+  getRelatedProducts,
+  Product,
+} from "@/app/services/productService";
 
 export default function ProductDetailPage({
   params,
@@ -42,7 +32,6 @@ export default function ProductDetailPage({
   const [quantity, setQuantity] = useState(1);
   const router = useRouter();
   const { addToCart } = useCart();
-  const { showToast } = useToast();
 
   const handleBuyNow = () => {
     if (!product) return;
@@ -60,11 +49,8 @@ export default function ProductDetailPage({
 
     const fetchProduct = async () => {
       setLoading(true);
-      const { data: productData, error: productError } = (await supabase
-        .from("products")
-        .select("*")
-        .eq("id", id)
-        .single()) as { data: Product | null; error: any };
+      const { data: productData, error: productError } =
+        await getProductById(id);
 
       if (productError || !productData) {
         console.error("Error fetching product:", productError);
@@ -73,12 +59,8 @@ export default function ProductDetailPage({
         setProduct(productData);
 
         // Fetch related products
-        const { data: relatedData, error: relatedError } = (await supabase
-          .from("products")
-          .select("*")
-          .eq("category", productData.category)
-          .neq("id", productData.id)
-          .limit(4)) as { data: Product[] | null; error: any };
+        const { data: relatedData, error: relatedError } =
+          await getRelatedProducts(productData.category, productData.id, 4);
 
         if (relatedError) {
           console.error("Error fetching related products:", relatedError);
@@ -117,7 +99,6 @@ export default function ProductDetailPage({
 
   const handleAddToCart = () => {
     if (product) addToCart(product, quantity);
-    showToast("Item added to cart successfully", "success");
   };
   const incrementQuantity = () => {
     setQuantity((prev) => prev + 1);

@@ -7,6 +7,10 @@ const nextConfig = {
         destination: '/admin/AdminLoginPage',
       },
       {
+        source: '/admin/unauthorized',
+        destination: '/admin/AdminUnauthorized',
+      },
+      {
         source: '/admin',
         destination: '/admin/AdminDashboard',
       },

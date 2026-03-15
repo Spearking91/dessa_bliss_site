@@ -7,7 +7,7 @@
 import Image from "next/image";
 // import Link from "next/link"; // Not used
 import { useState, useEffect } from "react";
-import { Loader2 } from "lucide-react"; // Shield is not used
+import { Eye, EyeOff, Loader2 } from "lucide-react"; // Shield is not used
 import { TabsTrigger, Tabs, TabsContent, TabsList } from "../components/tabs";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useRouter } from "next/navigation";
@@ -22,6 +22,7 @@ export default function Auth() {
   const router = useRouter();
   const { session, loading: authLoading } = useAuth();
   const { showToast } = useToast();
+  const [showPassword, setShowPassword] = useState(false);
 
   // return (
   //   <div className="flex min-h-screen bg-base-200 flex-row">
@@ -146,15 +147,23 @@ export default function Auth() {
                   <label htmlFor="signin-password" className={"font-semibold"}>
                     Password
                   </label>
-                  <input
-                    className="input w-full rounded-lg"
-                    id="signin-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    required
-                  />
+                  <div className="input w-full rounded-lg">
+                    <input
+                      className="w-full"
+                      id="signin-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="submit"
@@ -209,15 +218,23 @@ export default function Auth() {
                   <label htmlFor="signup-password" className={"font-semibold"}>
                     Password
                   </label>
-                  <input
-                    className="input w-full rounded-lg"
-                    id="signup-password"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Min 6 characters"
-                    required
-                  />
+                  <div className="input w-full rounded-lg">
+                    <input
+                      className="w-full"
+                      id="signup-password"
+                      type={showPassword ? "text" : "password"}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <button
                   type="submit"

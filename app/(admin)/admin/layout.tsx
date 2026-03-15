@@ -1,6 +1,6 @@
-"use client";
+// "use client";
 
-import { usePathname } from "next/navigation";
+// import { usePathname } from "next/navigation";
 import { AdminAuthProvider } from "@/app/context/AdminAuthContext";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
@@ -10,19 +10,19 @@ export default function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-  // We'll hide the main admin layout and sidebar on the login page.
-  const isPublicPage = [
-    "/admin/login",
-    "/admin/unauthorized",
-    "/admin/AdminLoginPage/pending-admin-confirmation",
-  ].includes(pathname);
+  // const pathname = usePathname();
+  // // We'll hide the main admin layout and sidebar on the login page.
+  // const isPublicPage = [
+  //   "/admin/login",
+  //   "/admin/unauthorized",
+  //   "/admin/AdminLoginPage/pending-admin-confirmation",
+  // ].includes(pathname);
 
   return (
     <AdminAuthProvider>
-      {isPublicPage ? (
+      {/* {isPublicPage ? (
         <>{children}</>
-      ) : (
+      ) : ( */}
         <AdminProtectedRoute>
           <div className="flex min-h-screen bg-background">
             <AdminSidebar />
@@ -31,7 +31,7 @@ export default function AdminLayout({
             </main>
           </div>
         </AdminProtectedRoute>
-      )}
+      {/* )} */}
     </AdminAuthProvider>
   );
 }

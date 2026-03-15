@@ -28,7 +28,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
-      (_event, currentSession) => {
+      async (_event, currentSession) => {
+        if (currentSession) {
+          const { error } = await supabase.auth.getUser();
+          if (error) {
+            await supabase.auth.signOut();
+            return;
+          }
+        }
         setSession(currentSession);
         setUser(currentSession?.user || null);
         setLoading(false);

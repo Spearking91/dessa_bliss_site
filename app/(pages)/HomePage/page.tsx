@@ -572,8 +572,9 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { allProducts, colorOptions } from "@/app/data/products";
-import { supabase } from "@/utils/supabase/supabase_client";
+import { getProducts, Product } from "@/app/services/productService";
 import Loading from "@/app/loading";
+import { supabase } from "@/utils/supabase/supabase_client";
 
 // Module-level cache — we still keep it for realtime updates, but we always fetch initially
 
@@ -588,7 +589,7 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -612,10 +613,7 @@ export default function HomePage() {
     setError(null);
 
     try {
-      const { data, error: supabaseError } = await supabase
-        .from("products")
-        .select("*")
-        .limit(12);
+      const { data, error: supabaseError } = await getProducts(12);
 
       if (!isMounted.current) return;
       if (supabaseError) throw supabaseError;

@@ -345,9 +345,9 @@ const UserTitleBar = () => {
         {user ? (
           <div className="dropdown dropdown-end">
             <label tabIndex={0} className="btn btn-ghost btn-circle avatar">
-              <div className="w-10 rounded-full">
-                <Avatar />
-              </div>
+              {/* <div className="w-10 rounded-full"> */}
+              <Avatar />
+              {/* </div> */}
             </label>
             <ul
               tabIndex={0}
@@ -356,9 +356,9 @@ const UserTitleBar = () => {
               <li className="p-3 border-b border-base-200">
                 <div className="flex items-center gap-3">
                   <div className="avatar">
-                    <div className="w-12 rounded-full">
-                      <Avatar />
-                    </div>
+                    {/* <div className="w-12 rounded-full"> */}
+                    <Avatar />
+                    {/* </div> */}
                   </div>
                   <div>
                     <p className="font-medium">{user.email}</p>

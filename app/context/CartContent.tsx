@@ -5,6 +5,7 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useRef,
   useCallback,
 } from "react";
 import { useToast } from "./ToastContext";
@@ -15,6 +16,7 @@ interface Product {
   price: number;
   image: string | null;
   category: string;
+  stock: number;
 }
 
 interface CartItem {
@@ -48,21 +50,31 @@ interface CartProviderProps {
 
 export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
+  const isInitialized = useRef(false);
   const { showToast } = useToast();
 
   useEffect(() => {
+    if (isInitialized.current) return;
     try {
       const savedCart = localStorage.getItem("cart");
       if (savedCart) {
-        setCart(JSON.parse(savedCart));
+        const parsed = JSON.parse(savedCart);
+        // Safety: Filter out any null items or items with missing product data
+        if (Array.isArray(parsed)) {
+          setCart(parsed.filter((item) => item?.product?.id));
+        }
       }
+      isInitialized.current = true;
     } catch (error) {
       console.error("Failed to load cart from localStorage", error);
       showToast("Error", "error", "Could not load cart from storage.");
     }
-  }, [showToast]);
+  }, []); // Run only once on mount
 
   useEffect(() => {
+    // Only save if we have finished the initial load from localStorage
+    if (!isInitialized.current) return;
+
     try {
       localStorage.setItem("cart", JSON.stringify(cart));
     } catch (error) {
@@ -73,39 +85,45 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const addToCart = useCallback(
     (product: Product, quantity: number) => {
+      const existingItem = cart.find(
+        (item) => item?.product?.id === product.id,
+      );
+
+      if (existingItem) {
+        showToast(
+          "Cart updated",
+          "info",
+          `${product.name} quantity updated in cart`,
+        );
+      } else {
+        showToast(
+          "Added to cart",
+          "success",
+          `${product.name} added to your cart`,
+        );
+      }
+
       setCart((prevCart) => {
-        const existingItem = prevCart.find(
+        const isMatch = prevCart.find(
           (item) => item?.product?.id === product.id,
         );
-
-        if (existingItem) {
-          showToast(
-            "Cart updated",
-            "info",
-            `${product.name} quantity updated in cart`,
-          );
+        if (isMatch) {
           return prevCart.map((item) =>
             item?.product?.id === product.id
               ? { ...item, quantity: item.quantity + quantity }
               : item,
           );
         }
-
-        showToast(
-          "Added to cart",
-          "success",
-          `${product.name} added to your cart`,
-        );
         return [...prevCart, { product, quantity }];
       });
     },
-    [showToast],
+    [showToast, cart],
   );
 
   const removeFromCart = useCallback(
     (productId: string) => {
       setCart((prevCart) =>
-        prevCart.filter((item) => item.product.id !== productId),
+        prevCart.filter((item) => item?.product?.id !== productId),
       );
       showToast("Item removed", "info", "Product removed from your cart");
     },
@@ -121,7 +139,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
       setCart((prevCart) =>
         prevCart.map((item) =>
-          item.product.id === productId ? { ...item, quantity } : item,
+          item?.product?.id === productId ? { ...item, quantity } : item,
         ),
       );
     },
@@ -139,13 +157,13 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
 
   const getCartTotal = useCallback(() => {
     return cart.reduce(
-      (total, item) => total + item.product.price * item.quantity,
+      (total, item) => total + (item?.product?.price || 0) * item.quantity,
       0,
     );
   }, [cart]);
 
   const getCartItemCount = useCallback(() => {
-    return cart.reduce((count, item) => count + item.quantity, 0);
+    return cart.reduce((count, item) => count + (item?.quantity || 0), 0);
   }, [cart]);
 
   return (

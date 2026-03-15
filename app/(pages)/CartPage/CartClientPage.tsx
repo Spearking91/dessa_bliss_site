@@ -79,7 +79,7 @@ const CartClientPage = () => {
                     <td className="py-4 px-6">
                       <div className="flex items-center">
                         <img
-                          src={item.product.images[0]}
+                          src={item.product.image || "/logo2.png"}
                           alt={item.product.name}
                           className="h-16 w-16 object-cover rounded-md mr-4"
                         />
@@ -112,7 +112,7 @@ const CartClientPage = () => {
                           onClick={() =>
                             updateQuantity(item.product.id, item.quantity + 1)
                           }
-                          disabled={item.quantity >= item.product.stockCount}
+                          disabled={item.quantity >= item.product.stock}
                           className="p-1 rounded-full hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <PlusCircle className="h-4 w-4" />

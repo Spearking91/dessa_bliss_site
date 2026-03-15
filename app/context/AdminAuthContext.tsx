@@ -59,6 +59,13 @@ export const AdminAuthProvider: React.FC<{ children: React.ReactNode }> = ({
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const { error } = await supabase.auth.getUser();
+        if (error) {
+          await supabase.auth.signOut();
+          return;
+        }
+      }
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
