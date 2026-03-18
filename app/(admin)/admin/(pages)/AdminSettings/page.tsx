@@ -1,5 +1,5 @@
+"use client";
 import { useState } from "react";
-
 import { Store, CreditCard, Truck } from "lucide-react";
 import { useToast } from "@/app/context/ToastContext";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";

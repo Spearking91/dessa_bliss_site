@@ -66,7 +66,7 @@ function PendingAdminConfirmationContent() {
           Confirm your email
         </h2>
         <p className="mt-2 text-base-content/80">
-          We've sent a confirmation link to{" "}
+          We have sent a confirmation link to{" "}
           <strong className="text-primary">{email || "your email"}</strong>.
         </p>
         <p className="mt-1 text-base-content/80">

@@ -557,13 +557,17 @@
 // }
 
 "use client";
-import React, { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import {
-  Search,
   SlidersHorizontal,
   Grid3x3,
   List,
-  Heart,
   Star,
   TrendingUp,
   AlertTriangle,
@@ -578,13 +582,13 @@ import { supabase } from "@/utils/supabase/supabase_client";
 
 // Module-level cache — we still keep it for realtime updates, but we always fetch initially
 
-let productCache: any[] | null = null;
+let productCache: Product[] | null = null;
 let lastFetchTime = 0;
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
 export default function HomePage() {
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 500]);
@@ -609,7 +613,7 @@ export default function HomePage() {
   const fetchProductsData = useCallback(async (isRetry = false) => {
     if (isRetry) setIsRetrying(true);
     else setIsLoading(true);
-    
+
     setError(null);
 
     try {
@@ -622,12 +626,22 @@ export default function HomePage() {
         productCache = data;
         lastFetchTime = Date.now();
         setProducts(data);
-        console.log(isRetry ? "Retry successful" : "Initial fetch successful", data.length, "products");
+        console.log(
+          isRetry ? "Retry successful" : "Initial fetch successful",
+          data.length,
+          "products",
+        );
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (isMounted.current) {
-        console.error("Fetch error:", err.message);
-        setError(isRetry ? "Failed to retry. Please try again." : "Failed to load products.");
+        const message =
+          err instanceof Error ? err.message : "An unknown error occurred";
+        console.error("Fetch error:", message);
+        setError(
+          isRetry
+            ? "Failed to retry. Please try again."
+            : "Failed to load products.",
+        );
       }
     } finally {
       if (isMounted.current) {
@@ -646,7 +660,7 @@ export default function HomePage() {
 
     // Check cache freshness before triggering a network request
     const now = Date.now();
-    if (productCache && (now - lastFetchTime < CACHE_TTL_MS)) {
+    if (productCache && now - lastFetchTime < CACHE_TTL_MS) {
       setProducts(productCache);
       setIsLoading(false);
       console.log("Using fresh cache —", productCache.length, "products");
@@ -664,12 +678,14 @@ export default function HomePage() {
           setProducts((current) => {
             let updated = [...current];
             if (payload.eventType === "INSERT") {
-              if (!current.some((p) => p.id === payload.new.id)) {
-                updated = [payload.new, ...current];
+              const newItem = payload.new as Product;
+              if (!current.some((p) => p.id === newItem.id)) {
+                updated = [newItem, ...current];
               }
             } else if (payload.eventType === "UPDATE") {
+              const updatedItem = payload.new as Product;
               updated = current.map((p) =>
-                p.id === payload.new.id ? payload.new : p,
+                p.id === updatedItem.id ? updatedItem : p,
               );
             } else if (payload.eventType === "DELETE") {
               updated = current.filter((p) => p.id !== payload.old.id);
@@ -686,7 +702,7 @@ export default function HomePage() {
       isMounted.current = false;
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchProductsData]);
 
   // ────────────────────────────────────────────────
   //  Filtering + Sorting (memoized)
@@ -725,10 +741,10 @@ export default function HomePage() {
         temp.sort((a, b) => b.price - a.price);
         break;
       case "rating":
-        temp.sort((a, b) => b.rating - a.rating);
+        temp.sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0));
         break;
       case "popular":
-        temp.sort((a, b) => b.reviews - a.reviews);
+        temp.sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0));
         break;
       // featured → original order
     }
@@ -961,9 +977,10 @@ export default function HomePage() {
                       <TrendingUp size={12} /> Trending
                     </div>
                   )}
-                  <img
-                    src={product.image}
+                  <Image
+                    src={product.image || "/logo2.png"}
                     alt={product.name}
+                    fill
                     className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 </figure>
@@ -1019,9 +1036,10 @@ export default function HomePage() {
                       <TrendingUp size={12} /> Trending
                     </div>
                   )}
-                  <img
-                    src={product.image}
+                  <Image
+                    src={product.image || "/logo2.png"}
                     alt={product.name}
+                    fill
                     className="object-cover h-full group-hover:scale-105 transition-transform"
                   />
                 </figure>

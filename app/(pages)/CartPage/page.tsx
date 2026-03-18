@@ -78,7 +78,7 @@
 //                   <tr key={item.product.id} className="hover:bg-gray-50">
 //                     <td className="py-4 px-6">
 //                       <div className="flex items-center">
-//                         <img
+//                         <Image
 //                           // src={item.product.images[0]}
 //                           src={item.product.image || "/logo2.png"}
 //                           alt={item.product.name}
@@ -250,17 +250,25 @@
 
 "use client";
 import { useState } from "react";
-import { Trash2, ShoppingBag, PlusCircle, MinusCircle, ArrowLeft } from "lucide-react";
+import {
+  Trash2,
+  ShoppingBag,
+  PlusCircle,
+  MinusCircle,
+  ArrowLeft,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/CartContent";
 import Link from "next/link";
 import { useAuth } from "@/app/auth/AuthContext";
 import { useToast } from "@/app/context/ToastContext";
+import Image from "next/image";
 
 const CartPage = () => {
   const router = useRouter();
   const { user } = useAuth();
-  const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart } = useCart();
+  const { cart, updateQuantity, removeFromCart, getCartTotal, clearCart } =
+    useCart();
   const [couponCode, setCouponCode] = useState("");
   const { showToast } = useToast();
 
@@ -273,7 +281,11 @@ const CartPage = () => {
   const handleCheckout = (e: React.MouseEvent<HTMLButtonElement>) => {
     e.preventDefault();
     if (!user) {
-      showToast("Authentication Required", "warning", "Please sign in to checkout");
+      showToast(
+        "Authentication Required",
+        "warning",
+        "Please sign in to checkout",
+      );
       return;
     }
     router.push("/CheckoutPage");
@@ -287,9 +299,13 @@ const CartPage = () => {
         </div>
         <h1 className="text-3xl font-bold mb-4">Your Cart is Empty</h1>
         <p className="text-base-content/70 mb-8 max-w-md">
-          Looks like you haven't added anything yet. Let's find something you’ll love!
+          Looks like you have not added anything yet. Let us find something you
+          will love!
         </p>
-        <button className="btn btn-primary btn-lg gap-2" onClick={() => router.push("/HomePage")}>
+        <button
+          className="btn btn-primary btn-lg gap-2"
+          onClick={() => router.push("/HomePage")}
+        >
           <ArrowLeft size={18} />
           Start Shopping
         </button>
@@ -304,7 +320,9 @@ const CartPage = () => {
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 max-w-7xl">
-      <h1 className="text-3xl lg:text-4xl font-bold mb-8 lg:mb-10">Shopping Cart</h1>
+      <h1 className="text-3xl lg:text-4xl font-bold mb-8 lg:mb-10">
+        Shopping Cart
+      </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
         {/* Cart Items */}
@@ -316,20 +334,27 @@ const CartPage = () => {
                   <thead>
                     <tr className="bg-base-200/50">
                       <th className="py-4 px-4 lg:px-6 text-left">Product</th>
-                      <th className="py-4 px-4 text-center hidden sm:table-cell">Quantity</th>
-                      <th className="py-4 px-4 text-right hidden md:table-cell">Price</th>
+                      <th className="py-4 px-4 text-center hidden sm:table-cell">
+                        Quantity
+                      </th>
+                      <th className="py-4 px-4 text-right hidden md:table-cell">
+                        Price
+                      </th>
                       <th className="py-4 px-4 text-right">Total</th>
                       <th className="py-4 px-4 text-center w-12"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-base-200">
                     {cart.map((item) => (
-                      <tr key={item.product.id} className="hover:bg-base-200/30 transition-colors">
+                      <tr
+                        key={item.product.id}
+                        className="hover:bg-base-200/30 transition-colors"
+                      >
                         <td className="py-4 px-4 lg:px-6">
                           <div className="flex items-center gap-3 sm:gap-4">
                             <div className="avatar">
                               <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-md bg-base-200">
-                                <img
+                                <Image
                                   src={item.product.image || "/logo2.png"}
                                   alt={item.product.name}
                                   className="object-cover"
@@ -354,7 +379,12 @@ const CartPage = () => {
                           <div className="join">
                             <button
                               className="btn btn-sm join-item"
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product.id,
+                                  item.quantity - 1,
+                                )
+                              }
                               disabled={item.quantity <= 1}
                             >
                               <MinusCircle size={16} />
@@ -364,8 +394,15 @@ const CartPage = () => {
                             </button>
                             <button
                               className="btn btn-sm join-item"
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              disabled={item.quantity >= (item.product.stock ?? 999)}
+                              onClick={() =>
+                                updateQuantity(
+                                  item.product.id,
+                                  item.quantity + 1,
+                                )
+                              }
+                              disabled={
+                                item.quantity >= (item.product.stock ?? 999)
+                              }
                             >
                               <PlusCircle size={16} />
                             </button>
@@ -397,11 +434,17 @@ const CartPage = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
-            <button className="btn btn-outline gap-2" onClick={() => router.push("/")}>
+            <button
+              className="btn btn-outline gap-2"
+              onClick={() => router.push("/")}
+            >
               <ArrowLeft size={18} />
               Continue Shopping
             </button>
-            <button className="btn btn-outline text-error hover:bg-error/10" onClick={clearCart}>
+            <button
+              className="btn btn-outline text-error hover:bg-error/10"
+              onClick={clearCart}
+            >
               Clear Cart
             </button>
           </div>
@@ -452,7 +495,10 @@ const CartPage = () => {
                 </div>
               </div>
 
-              <button className="btn btn-primary w-full mt-6" onClick={handleCheckout}>
+              <button
+                className="btn btn-primary w-full mt-6"
+                onClick={handleCheckout}
+              >
                 Proceed to Checkout
               </button>
             </div>
@@ -468,7 +514,10 @@ const CartPage = () => {
               <div className="space-y-3 text-sm">
                 <div>
                   <span className="font-medium">Email: </span>
-                  <a href="mailto:support@retailrift.com" className="link link-primary">
+                  <a
+                    href="mailto:support@retailrift.com"
+                    className="link link-primary"
+                  >
                     support@retailrift.com
                   </a>
                 </div>

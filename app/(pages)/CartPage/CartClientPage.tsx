@@ -6,6 +6,7 @@ import { useCart } from "@/app/context/CartContent";
 import Link from "next/link";
 import { useAuth } from "@/app/auth/AuthContext";
 import { useToast } from "@/app/context/ToastContext";
+import Image from "next/image";
 
 const CartClientPage = () => {
   const router = useRouter();
@@ -39,7 +40,7 @@ const CartClientPage = () => {
         <ShoppingBag className="h-16 w-16 mx-auto text-gray-400 mb-4" />
         <h1 className="text-2xl font-bold mb-4">Your Cart is Empty</h1>
         <p className="mb-8">
-          Looks like you haven't added any products to your cart yet.
+          Looks like you have not added any products to your cart yet.
         </p>
         <button
           className="btn btn-primary"
@@ -78,7 +79,7 @@ const CartClientPage = () => {
                   <tr key={item.product.id} className="hover:bg-gray-50">
                     <td className="py-4 px-6">
                       <div className="flex items-center">
-                        <img
+                        <Image
                           src={item.product.image || "/logo2.png"}
                           alt={item.product.name}
                           className="h-16 w-16 object-cover rounded-md mr-4"

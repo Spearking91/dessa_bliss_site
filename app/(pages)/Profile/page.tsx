@@ -4,9 +4,10 @@ import { supabase } from "@/utils/supabase/supabase_client";
 import { useRouter } from "next/navigation";
 import React from "react";
 
-const page = () => {
-  const { session, user } = useAuth();
+const ProfilePage = () => {
+  const { user } = useAuth();
   const router = useRouter();
+
   const signOut = async (): Promise<void> => {
     const { error } = await supabase.auth.signOut();
     if (error) {
@@ -31,4 +32,4 @@ const page = () => {
   );
 };
 // TODO: Implement actual sign-up logic for admin users, similar to handleSignIn
-export default page;
+export default ProfilePage;

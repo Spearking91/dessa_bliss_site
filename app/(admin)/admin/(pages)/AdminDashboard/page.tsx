@@ -29,6 +29,17 @@ import {
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 import { supabase } from "@/utils/supabase/supabase_client";
 
+interface Order {
+  id: string;
+  status: string;
+  total: number | null;
+}
+
+interface Product {
+  id: string;
+  category: string | null;
+}
+
 // Keep static chart data (would require aggregation queries for real data)
 const revenueData = [
   { month: "Jan", revenue: 4200 },
@@ -136,25 +147,27 @@ const AdminDashboard = () => {
         ],
       );
 
-      const orders = ordersRes.data || [];
+      const orders: Order[] = (ordersRes.data as Order[]) || [];
       const revenue = orders.reduce(
-        (sum: number, o: any) => sum + Number(o.total || 0),
+        (sum: number, o: Order) => sum + Number(o.total || 0),
         0,
       );
-      const pending = orders.filter((o: any) => o.status === "pending").length;
+      const pending = orders.filter(
+        (o: Order) => o.status === "pending",
+      ).length;
       const completed = orders.filter(
-        (o: any) => o.status === "delivered",
+        (o: Order) => o.status === "delivered",
       ).length;
       const cancelled = orders.filter(
-        (o: any) => o.status === "cancelled",
+        (o: Order) => o.status === "cancelled",
       ).length;
 
       // Category distribution from products
-      const products = productsRes.data || [];
+      const products: Product[] = (productsRes.data as Product[]) || [];
       const catMap: Record<string, number> = {};
-      products.forEach((p: any) => {
-        catMap[p.category || "Other"] =
-          (catMap[p.category || "Other"] || 0) + 1;
+      products.forEach((p: Product) => {
+        const categoryName = p.category || "Other";
+        catMap[categoryName] = (catMap[categoryName] || 0) + 1;
       });
       const dist = Object.entries(catMap).map(([name, value], i) => ({
         name,
@@ -233,10 +246,11 @@ const AdminDashboard = () => {
                     borderRadius: "8px",
                     color: "#000",
                   }}
-                  formatter={(value: number) => [
-                    `$${value.toLocaleString()}`,
-                    "Revenue",
-                  ]}
+                  formatter={(value) =>
+                    typeof value === "number"
+                      ? [`$${value.toLocaleString()}`, "Revenue"]
+                      : [value, "Revenue"]
+                  }
                 />
                 <Line
                   type="monotone"
@@ -289,9 +303,13 @@ const AdminDashboard = () => {
                   cx="50%"
                   cy="50%"
                   outerRadius={80}
-                  label={({ name, percent }: { name: any; percent: any }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
+                  // label={({
+                  //   name,
+                  //   percent,
+                  // }: {
+                  //   name: string | number | undefined;
+                  //   percent: number | undefined;
+                  // }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
                   fontSize={11}
                 >
                   {categoryDist.map((entry, i) => (

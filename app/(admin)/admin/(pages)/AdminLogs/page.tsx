@@ -19,7 +19,7 @@ interface LogEntry {
   action: string;
   resource_type: string;
   resource_id: string | null;
-  details: Record<string, any>;
+  details: Record<string, unknown>;
   created_at: string;
 }
 

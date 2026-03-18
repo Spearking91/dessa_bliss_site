@@ -19,7 +19,7 @@ const PaystackButton = ({
 
   const initializePayment = usePaystackPayment(config);
 
-  const onSuccess = (reference: any) => {
+  const onSuccess = (reference: { reference: string }) => {
     // 1. Transaction was successful in the popup
     // 2. Now, send the reference to your Supabase Function to verify!
     showToast("Payment successful, verifying...", "info");
@@ -65,7 +65,7 @@ const PaystackButton = ({
 
   return (
     <button
-      onClick={() => initializePayment(onSuccess, onClose)}
+      onClick={() => initializePayment({ onSuccess, onClose })}
       className="btn btn-success"
     >
       Pay Now

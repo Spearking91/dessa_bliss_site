@@ -1,11 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 
 interface Props {
   title: string;
-  onClick?: any;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   onNavigate?: string;
   full?: boolean;
   Loading?: boolean;

@@ -3,21 +3,18 @@
 import { CustomButton } from "@/app/components/CustomButton";
 import TextInput from "@/app/components/TextInput";
 import { supabase } from "@/utils/supabase/supabase_client";
-import { createClient } from "@supabase/supabase-js";
-import { Lock, Mail, UserRound } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { useState } from "react";
 
 export default function Login() {
-  const [Name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [Agree, setAgree] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async (e: any) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const { data: LoginData, error: LoginError } =
       await supabase.auth.signInWithPassword({
@@ -44,15 +41,12 @@ export default function Login() {
       <h2
         className="text-base-content"
         style={{ fontWeight: "bold", fontSize: 20 }}
-        children={"Login into your account"}
-      />
-      <p
-        className="text-sm"
-        style={{ textAlign: "center", fontWeight: "400" }}
-        children={
-          "Login to your account and explore the wonderful items we have offer"
-        }
-      />
+      >
+        Login into your account
+      </h2>
+      <p className="text-sm" style={{ textAlign: "center", fontWeight: "400" }}>
+        Login to your account and explore the wonderful items we have offer
+      </p>
       <CustomButton title={"Login with Google"} full color="secondary" />
       <div className="flex-row flex items-center gap-2 w-full text-base-content">
         <div style={{ borderWidth: 1, height: 0.5, width: "45%" }} />
@@ -88,11 +82,9 @@ export default function Login() {
             Remember me
           </label>
         </div>
-        <Link
-          href={"/"}
-          children={"Forgot password?"}
-          className="text-accent"
-        />
+        <Link href={"/"} className="text-accent">
+          Forgot password?
+        </Link>
       </div>
       <CustomButton onClick={handleSubmit} full={true} title={"Login"} />
     </div>

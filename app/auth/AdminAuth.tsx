@@ -4,15 +4,12 @@
 // import Signup from "./Signup"; // Not used in current JSX
 // import bat from "../../videos/batman.mp4"; // Not used
 // import LoginForm from "./Login"; // Not used in current JSX
-import Image from "next/image";
-import Link from "next/link"; // Not used
 import { useState, useEffect } from "react";
 import { Loader2, Shield } from "lucide-react";
 import { TabsTrigger, Tabs, TabsContent, TabsList } from "../components/tabs";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useAuth } from "./AuthContext";
 import { useRouter } from "next/navigation";
-
 
 export default function AdminAuth() {
   const [email, setEmail] = useState("");

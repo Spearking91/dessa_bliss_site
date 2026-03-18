@@ -3,22 +3,18 @@
 import { CustomButton } from "@/app/components/CustomButton";
 import TextInput from "@/app/components/TextInput";
 import { supabase } from "@/utils/supabase/supabase_client";
-import { createClient } from "@supabase/supabase-js";
-import { Lock, Mail, UserRound } from "lucide-react";
+import { Lock, Mail } from "lucide-react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useState } from "react";
+import { useState } from "react";
 
 export default function Signup() {
-  const [Name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [Agree, setAgree] = useState(false);
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  const _signUp = async (e: any) => {
+  const _signUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     const { data: LoginData, error: LoginError } = await supabase.auth.signUp({
@@ -48,15 +44,12 @@ export default function Signup() {
       <h2
         className="text-base-content"
         style={{ fontWeight: "bold", fontSize: 20 }}
-        children={"Register your account"}
-      />
-      <p
-        className="text-sm"
-        style={{ textAlign: "center", fontWeight: "400" }}
-        children={
-          "Join our community and explore the wonderful items we have offer"
-        }
-      />
+      >
+        Register your account
+      </h2>
+      <p className="text-sm" style={{ textAlign: "center", fontWeight: "400" }}>
+        Join our community and explore the wonderful items we have offer
+      </p>
       {/* <CustomButton title={"Login with Google"} full color="secondary" /> */}
       <div className="flex-row flex items-center gap-2 w-full text-base-content">
         <div style={{ borderWidth: 1, height: 0.5, width: "45%" }} />

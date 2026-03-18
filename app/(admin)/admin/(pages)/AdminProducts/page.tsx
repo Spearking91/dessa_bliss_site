@@ -10,6 +10,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
+import Image from "next/image";
 import { useToast } from "@/app/context/ToastContext";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 
@@ -140,7 +141,7 @@ const AdminProducts = () => {
     if (editingProduct) {
       const { error } = await supabase
         .from("admin_products")
-        .update({ ...payload, updated_at: new Date().toISOString() } as any)
+        .update({ ...payload, updated_at: new Date().toISOString() })
         .eq("id", editingProduct.id);
 
       if (error) toast("Error", "error", error.message);
@@ -148,7 +149,7 @@ const AdminProducts = () => {
     } else {
       const { error } = await supabase
         .from("admin_products")
-        .insert({ ...payload, created_by: user?.id } as any);
+        .insert({ ...payload, created_by: user?.id });
 
       if (error) {
         console.error("Insert error:", error);
@@ -278,7 +279,13 @@ const AdminProducts = () => {
                       {product.images?.[0] ? (
                         <div className="avatar">
                           <div className="w-10 rounded">
-                            <img src={product.images[0]} alt={product.name} />
+                            <Image
+                              src={product.images[0]}
+                              alt={product.name}
+                              width={40}
+                              height={40}
+                              className="object-cover"
+                            />
                           </div>
                         </div>
                       ) : (
@@ -547,10 +554,12 @@ const AdminProducts = () => {
                 <div className="mt-3 flex flex-wrap gap-3">
                   {form.images.map((url, index) => (
                     <div key={index} className="relative group">
-                      <img
+                      <Image
                         src={url}
                         alt="preview"
-                        className="w-20 h-20 object-cover rounded border"
+                        width={80}
+                        height={80}
+                        className="object-cover rounded border w-20 h-20"
                         onError={(e) =>
                           (e.currentTarget.src = "/placeholder-image.png")
                         }

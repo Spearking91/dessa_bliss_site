@@ -20,7 +20,7 @@ const NotFound = () => {
         <div className="mb-8">
           <h2 className="text-2xl font-semibold mb-2">Page not found</h2>
           <p className="text-gray-600">
-            The page you are looking for doesn't exist or has been moved.
+            The page you are looking for doesn&apos;t exist or has been moved.
           </p>
         </div>
         <Link href="/">

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import { Search, ShoppingCart, Eye, Table } from "lucide-react";
+import { Search, ShoppingCart, Eye } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
 
@@ -12,7 +12,7 @@ interface Order {
   status: string;
   total: number;
   payment_status: string;
-  items: any[];
+  items: string[];
   notes: string | null;
   created_at: string;
 }
@@ -62,7 +62,7 @@ const AdminOrders = () => {
       .update({
         status: newStatus,
         updated_at: new Date().toISOString(),
-      } as any)
+      })
       .eq("id", orderId);
     if (error) toast("Error", "error", error.message);
     else {

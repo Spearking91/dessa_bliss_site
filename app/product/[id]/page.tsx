@@ -1,12 +1,6 @@
 "use client";
-import { use, useState, useEffect, Fragment } from "react";
-import {
-  ShoppingCart,
-  ChevronRight,
-  Star,
-  Check,
-  ChevronLeft,
-} from "lucide-react";
+import { use, useState, useEffect } from "react";
+import { ShoppingCart, Star, Check, ChevronLeft } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@radix-ui/react-tabs";
 import { useCart } from "@/app/context/CartContent";
@@ -16,6 +10,7 @@ import {
   getRelatedProducts,
   Product,
 } from "@/app/services/productService";
+import Image from "next/image";
 
 export default function ProductDetailPage({
   params,
@@ -33,16 +28,16 @@ export default function ProductDetailPage({
   const router = useRouter();
   const { addToCart } = useCart();
 
-  const handleBuyNow = () => {
-    if (!product) return;
-    const params = new URLSearchParams();
-    params.append("name", product.name);
-    params.append("price", product.price.toString());
-    params.append("image", product.image || "");
-    params.append("quantity", quantity.toString());
+  // const handleBuyNow = () => {
+  //   if (!product) return;
+  //   const params = new URLSearchParams();
+  //   params.append("name", product.name);
+  //   params.append("price", product.price.toString());
+  //   params.append("image", product.image || "");
+  //   params.append("quantity", quantity.toString());
 
-    router.push(`/PaymentPage?${params.toString()}`);
-  };
+  //   router.push(`/PaymentPage?${params.toString()}`);
+  // };
 
   useEffect(() => {
     if (!id) return;
@@ -120,7 +115,7 @@ export default function ProductDetailPage({
         {/* Images */}
         <div className="space-y-4">
           <div className="aspect-square overflow-hidden border border-border rounded-lg">
-            <img
+            <Image
               src={product.image || "/placeholder-image.png"}
               alt={product.name}
               className="w-full h-full object-cover"
@@ -246,7 +241,7 @@ export default function ProductDetailPage({
             {relatedProducts.map((p) => (
               <div key={p.id} className="group">
                 <div className="aspect-square overflow-hidden rounded-lg bg-muted mb-3">
-                  <img
+                  <Image
                     src={p.image || "/placeholder-image.png"}
                     alt={p.name}
                     className="h-full w-full object-cover object-center transition-transform group-hover:scale-105"

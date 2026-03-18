@@ -1,11 +1,5 @@
 "use client";
-import {
-  Settings,
-  LogOut,
-  Shield,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { LogOut, Shield, ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useState } from "react";
@@ -23,7 +17,9 @@ const AdminSidebar = () => {
   const hasAccess = (requiredRoles: string[]) => {
     if (!role) return false;
     const minRequired = Math.min(
-      ...requiredRoles.map((r) => ROLE_HIERARCHY[r] || 0),
+      ...requiredRoles.map(
+        (r) => ROLE_HIERARCHY[r as keyof typeof ROLE_HIERARCHY] || 0,
+      ),
     );
     return ROLE_HIERARCHY[role] >= minRequired;
   };

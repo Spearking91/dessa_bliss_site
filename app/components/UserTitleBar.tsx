@@ -201,7 +201,7 @@
 
 "use client";
 import { useState } from "react";
-import { Search, Heart, ShoppingBag, User, Menu, X } from "lucide-react";
+import { Search, Heart, ShoppingBag, Menu, X } from "lucide-react";
 import { ThemeChanger } from "./ThemeChanger";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";

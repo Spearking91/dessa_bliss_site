@@ -1,4 +1,5 @@
 import { ShieldCheck, Truck, Headphones, Heart } from "lucide-react";
+import Image from "next/image";
 
 const values = [
   {
@@ -37,10 +38,10 @@ const AboutPage = () => {
             About Altershop
           </h1>
           <p className="text-muted-foreground text-lg leading-relaxed">
-            We're on a mission to make quality products accessible to everyone.
-            Founded with a passion for great design and fair pricing, Altershop
-            has grown into a trusted destination for thousands of happy
-            customers.
+            We&apos;re on a mission to make quality products accessible to
+            everyone. Founded with a passion for great design and fair pricing,
+            Altershop has grown into a trusted destination for thousands of
+            happy customers.
           </p>
         </div>
       </section>
@@ -62,10 +63,12 @@ const AboutPage = () => {
             </p>
           </div>
           <div className="rounded-xl overflow-hidden aspect-[4/3]">
-            <img
+            <Image
               src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
               alt="Our team collaborating"
               className="w-full h-full object-cover"
+              width={800}
+              height={600}
             />
           </div>
         </div>

@@ -27,7 +27,7 @@ const ContactPage = () => {
         <div className="container text-center">
           <h1 className="text-3xl md:text-4xl font-bold mb-3">Contact Us</h1>
           <p className="text-muted-foreground max-w-xl mx-auto">
-            Have a question or feedback? We'd love to hear from you.
+            Have a question or feedback? We would love to hear from you.
           </p>
         </div>
       </section>

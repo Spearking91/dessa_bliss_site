@@ -50,7 +50,7 @@ function PendingConfirmationContent() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-base-200">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="mt-4">Checking authentication status...</p>
+        <p className="mt-4">Checking authentication status</p>
       </div>
     );
   }
@@ -65,7 +65,7 @@ function PendingConfirmationContent() {
           Confirm your email
         </h2>
         <p className="mt-2 text-base-content/80">
-          We've sent a confirmation link to{" "}
+          We have sent a confirmation link to{" "}
           <strong className="text-primary">{email || "your email"}</strong>.
         </p>
         <p className="mt-1 text-base-content/80">
@@ -86,10 +86,17 @@ function PendingConfirmationContent() {
             Resend confirmation link
           </button>
         </div>
-        {resendMessage && <p className="mt-4 text-sm text-success">{resendMessage}</p>}
-        {errorMessage && <p className="mt-4 text-sm text-error">{errorMessage}</p>}
+        {resendMessage && (
+          <p className="mt-4 text-sm text-success">{resendMessage}</p>
+        )}
+        {errorMessage && (
+          <p className="mt-4 text-sm text-error">{errorMessage}</p>
+        )}
         <div className="mt-6 text-sm">
-          <button onClick={() => router.push("/auth")} className="link link-hover">
+          <button
+            onClick={() => router.push("/auth")}
+            className="link link-hover"
+          >
             Back to login
           </button>
         </div>

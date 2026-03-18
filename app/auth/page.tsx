@@ -71,7 +71,7 @@ export default function Auth() {
         showToast("Sign in successful", "success");
         // Redirect handled by useEffect
       }
-    } catch (error) {
+    } catch {
       showToast("An unexpected error occurred during sign-in.", "error");
     } finally {
       setLoading(false);
@@ -104,7 +104,7 @@ export default function Auth() {
           `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
         );
       }
-    } catch (error) {
+    } catch {
       showToast("An unexpected error occurred during sign-up.", "error");
     } finally {
       setLoading(false);

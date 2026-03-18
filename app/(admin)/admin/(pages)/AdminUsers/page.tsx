@@ -169,7 +169,7 @@ const AdminUsers = () => {
           <div className="modal-box">
             <h3 className="font-bold text-lg">Delete User</h3>
             <p className="py-4">
-              This will permanently remove this user's data. This action cannot
+              This will permanently remove this dataof the user. This action cannot
               be undone.
             </p>
             <div className="modal-action">

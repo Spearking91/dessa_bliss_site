@@ -69,7 +69,7 @@ export const CartProvider: React.FC<CartProviderProps> = ({ children }) => {
       console.error("Failed to load cart from localStorage", error);
       showToast("Error", "error", "Could not load cart from storage.");
     }
-  }, []); // Run only once on mount
+  }, [showToast]); // Run only once on mount
 
   useEffect(() => {
     // Only save if we have finished the initial load from localStorage
