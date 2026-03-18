@@ -1,11 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
-
-import { Search, ScrollText, Table } from 'lucide-react';
-import { Card, CardContent } from '@/app/components/card';
-import { TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/app/components/table';
-import { useToast } from '@/app/context/ToastContext';
-import { supabase } from '@/utils/supabase/supabase_client';
-import { Badge } from '@/app/components/badge';
+"use client";
+import { useState, useEffect, useCallback } from "react";
+import { Search, ScrollText, Table } from "lucide-react";
+import { Card, CardContent } from "@/app/components/card";
+import {
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/app/components/table";
+import { useToast } from "@/app/context/ToastContext";
+import { supabase } from "@/utils/supabase/supabase_client";
+import { Badge } from "@/app/components/badge";
 
 interface LogEntry {
   id: string;
@@ -19,24 +25,27 @@ interface LogEntry {
 
 const AdminLogs = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const { showToast } = useToast();
 
   const fetchLogs = useCallback(async () => {
     const { data, error } = await supabase
-      .from('activity_logs')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .from("activity_logs")
+      .select("*")
+      .order("created_at", { ascending: false })
       .limit(200);
-    if (error) showToast('Error', 'error', error.message);
+    if (error) showToast("Error", "error", error.message);
     else setLogs((data || []) as unknown as LogEntry[]);
   }, [showToast]);
 
-  useEffect(() => { fetchLogs(); }, [fetchLogs]);
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
-  const filtered = logs.filter(l =>
-    l.action.toLowerCase().includes(search.toLowerCase()) ||
-    l.resource_type.toLowerCase().includes(search.toLowerCase())
+  const filtered = logs.filter(
+    (l) =>
+      l.action.toLowerCase().includes(search.toLowerCase()) ||
+      l.resource_type.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -48,7 +57,12 @@ const AdminLogs = () => {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <input placeholder="Search logs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <input
+          placeholder="Search logs..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
       <Card>
@@ -65,18 +79,36 @@ const AdminLogs = () => {
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  <ScrollText className="h-8 w-8 mx-auto mb-2" />No logs found
-                </TableCell></TableRow>
-              ) : filtered.map(log => (
-                <TableRow key={log.id}>
-                  <TableCell className="text-muted-foreground text-sm">{new Date(log.created_at).toLocaleString()}</TableCell>
-                  <TableCell><Badge variant="secondary">{log.action}</Badge></TableCell>
-                  <TableCell className="text-foreground">{log.resource_type}</TableCell>
-                  <TableCell className="font-mono text-xs text-foreground">{log.resource_id?.slice(0, 8) || '—'}</TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">{log.admin_id?.slice(0, 8) || '—'}</TableCell>
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    <ScrollText className="h-8 w-8 mx-auto mb-2" />
+                    No logs found
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                filtered.map((log) => (
+                  <TableRow key={log.id}>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {new Date(log.created_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary">{log.action}</Badge>
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {log.resource_type}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-foreground">
+                      {log.resource_id?.slice(0, 8) || "—"}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground">
+                      {log.admin_id?.slice(0, 8) || "—"}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
