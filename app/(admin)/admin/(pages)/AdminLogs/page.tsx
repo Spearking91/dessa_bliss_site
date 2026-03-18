@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
 import { Search, ScrollText, Table } from "lucide-react";
-import { Card, CardContent } from "@/app/components/card";
+
 import {
   TableHeader,
   TableRow,
@@ -65,8 +65,8 @@ const AdminLogs = () => {
         />
       </div>
 
-      <Card>
-        <CardContent className="p-0">
+      <div className="card bg-base-100 shadow-md">
+        <div className="card-bodyp-0">
           <Table>
             <TableHeader>
               <TableRow>
@@ -111,8 +111,8 @@ const AdminLogs = () => {
               )}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
