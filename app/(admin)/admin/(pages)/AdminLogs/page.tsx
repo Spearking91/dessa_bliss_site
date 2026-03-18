@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
-import supabase from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Search, ScrollText } from 'lucide-react';
+
+import { Search, ScrollText, Table } from 'lucide-react';
+import { Card, CardContent } from '@/app/components/card';
+import { TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/app/components/table';
+import { useToast } from '@/app/context/ToastContext';
+import { supabase } from '@/utils/supabase/supabase_client';
+import { Badge } from '@/app/components/badge';
 
 interface LogEntry {
   id: string;
@@ -20,7 +20,7 @@ interface LogEntry {
 const AdminLogs = () => {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [search, setSearch] = useState('');
-  const { toast } = useToast();
+  const { showToast } = useToast();
 
   const fetchLogs = useCallback(async () => {
     const { data, error } = await supabase
@@ -28,9 +28,9 @@ const AdminLogs = () => {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(200);
-    if (error) toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    if (error) showToast('Error', 'error', error.message);
     else setLogs((data || []) as unknown as LogEntry[]);
-  }, [toast]);
+  }, [showToast]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -48,7 +48,7 @@ const AdminLogs = () => {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input placeholder="Search logs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
+        <input placeholder="Search logs..." value={search} onChange={e => setSearch(e.target.value)} className="pl-9" />
       </div>
 
       <Card>
