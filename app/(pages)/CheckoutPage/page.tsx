@@ -567,7 +567,7 @@ const CheckoutPage = () => {
     firstName: "",
     lastName: "",
     email: user?.email || "",
-    phone: "",
+    phone: "+233",
     address: "",
     city: "",
     state: "",
@@ -597,14 +597,18 @@ const CheckoutPage = () => {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!supabaseUrl) throw new Error("Supabase URL is not configured.");
 
-      const res = await fetch(`${supabaseUrl}/functions/v1/verify-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reference: ref }),
-      });
+      const { data, error: invokeError } = await supabase.functions.invoke(
+        "verify-payment",
+        {
+          body: { reference: ref },
+        },
+      );
 
-      const data = await res.json();
-      if (!res.ok || !data.verified) {
+      if (invokeError) {
+        throw invokeError;
+      }
+
+      if (!data.verified) {
         throw new Error(data.error || "Payment verification failed on server.");
       }
       return true;
@@ -664,7 +668,7 @@ const CheckoutPage = () => {
         .insert({
           user_id: user?.id,
           total_amount: total,
-          status: "pending_payment",
+          status: "pending",
           shipping_address: addressData,
           billing_address: billingIsSameAsShipping ? addressData : {},
         })
@@ -741,9 +745,9 @@ const CheckoutPage = () => {
     initializePayment({
       onSuccess,
       onClose,
-      reference,
-      email: addressData.email,
-      amount: Math.round(total * 100),
+      // reference,
+      // email: addressData.email,
+      // amount: Math.round(total * 100),
     });
   };
 
@@ -853,6 +857,7 @@ const CheckoutPage = () => {
                     <input
                       type="tel"
                       name="phone"
+                      maxLength={13}
                       value={addressData.phone}
                       onChange={handleAddressChange}
                       className="input input-bordered w-full"

@@ -11,7 +11,7 @@ const themes = [
   "aqua",
   "cupcake",
   "caramellatte",
-  "abyss"
+  "abyss",
 ];
 
 interface props {
@@ -19,7 +19,7 @@ interface props {
 }
 
 export const ThemeChanger = ({ isIcon = false }: props) => {
-  const [currentTheme, setCurrentTheme] = useState("default");
+  const [currentTheme, setCurrentTheme] = useState("caramellatte");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -40,7 +40,7 @@ export const ThemeChanger = ({ isIcon = false }: props) => {
     <div className="dropdown">
       {isIcon ? (
         <button className="p-2 hover:bg-accent transition-colors rounded-lg">
-          <Palette size={22} className="text-accent-content" />
+          <Palette size={22} className="text-base-content/80" />
         </button>
       ) : (
         <div

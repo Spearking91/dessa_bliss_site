@@ -36,7 +36,8 @@ export async function middleware(req: NextRequest) {
   if (
     pathname.startsWith("/admin") &&
     pathname !== "/admin/login" &&
-    pathname !== "/admin/AdminLoginPage/pending-admin-confirmation"
+    pathname !== "/admin/AdminLoginPage/pending-admin-confirmation" &&
+    pathname !== "/admin/unauthorized"
   ) {
     if (!session) {
       // Not logged in → redirect to login
@@ -54,7 +55,7 @@ export async function middleware(req: NextRequest) {
 
     if (!isAdmin) {
       const redirectUrl = req.nextUrl.clone();
-      redirectUrl.pathname = "/admin/login"; // or '/admin/login?unauthorized=true'
+      redirectUrl.pathname = "/admin/unauthorized";
       return NextResponse.redirect(redirectUrl);
     }
   }

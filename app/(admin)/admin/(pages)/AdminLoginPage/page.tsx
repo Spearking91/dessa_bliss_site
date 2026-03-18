@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Shield } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/context/ToastContext";
@@ -8,17 +8,18 @@ import { useAdminAuth } from "@/app/context/AdminAuthContext";
 const AdminLoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("+233");
   const [loading, setLoading] = useState(false);
-  const { signIn, signUp, isAdmin, user } = useAdminAuth();
+  const { signIn, isAdmin, user } = useAdminAuth();
   const router = useRouter();
   const { showToast } = useToast();
 
-  // If already authenticated and admin, redirect
-  if (user && isAdmin) {
-    router.replace("/admin");
-    return null;
-  }
+  useEffect(() => {
+    // If the user is already logged in and is an admin, redirect them to the dashboard.
+    // This also handles the redirect after a successful login, once the auth state is updated.
+    if (user && isAdmin) {
+      router.replace("/admin");
+    }
+  }, [user, isAdmin, router]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,10 +37,19 @@ const AdminLoginPage = () => {
           `/admin/AdminLoginPage/pending-admin-confirmation?email=${encodeURIComponent(email)}`,
         );
       }
-    } else {
-      router.replace("/admin");
     }
+    // On success, the useEffect hook above will handle the redirect when the `user` state updates.
   };
+
+  // While the redirect is happening for an already logged-in admin,
+  // return a loading indicator to avoid flashing the form.
+  if (user && isAdmin) {
+    return (
+      <div className="fixed inset-0 z-[100] bg-white flex items-center justify-center">
+        <p className="font-black text-xl">Redirecting to dashboard...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
