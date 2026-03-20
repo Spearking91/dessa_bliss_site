@@ -557,13 +557,7 @@
 // }
 
 "use client";
-import React, {
-  useState,
-  useMemo,
-  useEffect,
-  useRef,
-  useCallback,
-} from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import {
   SlidersHorizontal,
   Grid3x3,
@@ -576,15 +570,8 @@ import {
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { allProducts, colorOptions } from "@/app/data/products";
-import { getProducts, Product } from "@/app/services/productService";
 import Loading from "@/app/loading";
-import { supabase } from "@/utils/supabase/supabase_client";
-
-// Module-level cache — we still keep it for realtime updates, but we always fetch initially
-
-let productCache: Product[] | null = null;
-let lastFetchTime = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+import { useProducts } from "@/app/context/ProductContext";
 
 export default function HomePage() {
   const [view, setView] = useState<"grid" | "list">("grid");
@@ -593,116 +580,18 @@ export default function HomePage() {
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const { products, isLoading, error, refreshProducts, isRetrying } =
+    useProducts();
   const [currentPage, setCurrentPage] = useState(1);
-  const isMounted = useRef(true);
 
   const itemsPerPage = 12;
   const router = useRouter();
 
   const categories = ["All", ...new Set(allProducts.map((p) => p.category))];
 
-  // ────────────────────────────────────────────────
-  //  Real-time products + always fetch on mount
-  // ────────────────────────────────────────────────
-
-  // Centralized fetch function to ensure consistency
-  const fetchProductsData = useCallback(async (isRetry = false) => {
-    if (isRetry) setIsRetrying(true);
-    else setIsLoading(true);
-
-    setError(null);
-
-    try {
-      const { data, error: supabaseError } = await getProducts(12);
-
-      if (!isMounted.current) return;
-      if (supabaseError) throw supabaseError;
-
-      if (data) {
-        productCache = data;
-        lastFetchTime = Date.now();
-        setProducts(data);
-        console.log(
-          isRetry ? "Retry successful" : "Initial fetch successful",
-          data.length,
-          "products",
-        );
-      }
-    } catch (err: unknown) {
-      if (isMounted.current) {
-        const message =
-          err instanceof Error ? err.message : "An unknown error occurred";
-        console.error("Fetch error:", message);
-        setError(
-          isRetry
-            ? "Failed to retry. Please try again."
-            : "Failed to load products.",
-        );
-      }
-    } finally {
-      if (isMounted.current) {
-        setIsRetrying(false);
-        setIsLoading(false);
-      }
-    }
-  }, []);
-
   const handleRetry = async () => {
-    await fetchProductsData(true);
+    await refreshProducts(true);
   };
-
-  useEffect(() => {
-    isMounted.current = true;
-
-    // Check cache freshness before triggering a network request
-    const now = Date.now();
-    if (productCache && now - lastFetchTime < CACHE_TTL_MS) {
-      setProducts(productCache);
-      setIsLoading(false);
-      console.log("Using fresh cache —", productCache.length, "products");
-    } else {
-      fetchProductsData();
-    }
-
-    // Realtime subscription (unchanged)
-    const channel = supabase
-      .channel("products-homepage")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "products" },
-        (payload) => {
-          setProducts((current) => {
-            let updated = [...current];
-            if (payload.eventType === "INSERT") {
-              const newItem = payload.new as Product;
-              if (!current.some((p) => p.id === newItem.id)) {
-                updated = [newItem, ...current];
-              }
-            } else if (payload.eventType === "UPDATE") {
-              const updatedItem = payload.new as Product;
-              updated = current.map((p) =>
-                p.id === updatedItem.id ? updatedItem : p,
-              );
-            } else if (payload.eventType === "DELETE") {
-              updated = current.filter((p) => p.id !== payload.old.id);
-            }
-            productCache = updated; // keep cache in sync
-            lastFetchTime = Date.now(); // treat realtime update as "fresh"
-            return updated;
-          });
-        },
-      )
-      .subscribe();
-
-    return () => {
-      isMounted.current = false;
-      supabase.removeChannel(channel);
-    };
-  }, [fetchProductsData]);
 
   // ────────────────────────────────────────────────
   //  Filtering + Sorting (memoized)
@@ -971,7 +860,7 @@ export default function HomePage() {
                 className="card bg-base-100 shadow-xl hover:shadow-2xl transition-all group"
                 onClick={() => router.push(`/product/${product.id}`)}
               >
-                <figure className="relative">
+                <figure className="relative h-64">
                   {product.trending && (
                     <div className="badge badge-secondary absolute top-3 left-3 z-10 gap-1">
                       <TrendingUp size={12} /> Trending
@@ -981,7 +870,7 @@ export default function HomePage() {
                     src={product.image || "/logo2.png"}
                     alt={product.name}
                     fill
-                    className="w-full h-64 object-cover group-hover:scale-105 transition-transform duration-500"
+                    className="object-cover group-hover:scale-105 transition-transform duration-500"
                   />
                 </figure>
                 <div className="card-body p-4">
@@ -1030,7 +919,7 @@ export default function HomePage() {
                 className="card card-side bg-base-100 shadow-xl hover:shadow-2xl group"
                 onClick={() => router.push(`/product/${product.id}`)}
               >
-                <figure className="relative w-48">
+                <figure className="relative w-48 flex-shrink-0">
                   {product.trending && (
                     <div className="badge badge-secondary absolute top-3 left-3 z-10 gap-1">
                       <TrendingUp size={12} /> Trending
@@ -1040,7 +929,7 @@ export default function HomePage() {
                     src={product.image || "/logo2.png"}
                     alt={product.name}
                     fill
-                    className="object-cover h-full group-hover:scale-105 transition-transform"
+                    className="object-cover group-hover:scale-105 transition-transform"
                   />
                 </figure>
                 <div className="card-body">

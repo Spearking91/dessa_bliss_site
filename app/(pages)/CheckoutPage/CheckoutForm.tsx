@@ -53,6 +53,11 @@ const CheckoutForm = () => {
     useState<PaymentMethod>("credit-card");
   const [billingIsSameAsShipping, setBillingIsSameAsShipping] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [reference, setReference] = useState("");
+
+  useEffect(() => {
+    setReference(`dessa_${Math.random().toString(36).substring(2)}`);
+  }, []);
 
   const handleAddressChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -71,16 +76,31 @@ const CheckoutForm = () => {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
       if (!supabaseUrl) throw new Error("Supabase URL is not configured.");
 
-      const { data, error: invokeError } = await supabase.functions.invoke(
-        "verify-payment",
+      // Using fetch directly to avoid CORS issues with x-client-info header
+      // that supabase.functions.invoke adds automatically
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/verify-payment`,
         {
-          body: { reference: ref },
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(session?.access_token
+              ? { Authorization: `Bearer ${session.access_token}` }
+              : {}),
+          },
+          body: JSON.stringify({ reference: ref }),
         },
       );
 
-      if (invokeError) {
-        throw invokeError;
+      if (!response.ok) {
+        throw new Error(`Verification request failed: ${response.status}`);
       }
+
+      const data = await response.json();
 
       if (!data.verified) {
         throw new Error(data.error || "Payment verification failed on server.");
@@ -102,7 +122,7 @@ const CheckoutForm = () => {
     email: addressData.email,
     currency: "GHS",
     amount: Math.round(total * 100),
-    reference: "",
+    reference: reference, // Use the state reference so Paystack uses OUR code
   });
 
   const handleFinalizeOrder = async (e: React.FormEvent) => {
@@ -133,7 +153,6 @@ const CheckoutForm = () => {
     }
 
     let orderId: string | null = null;
-    const reference = `dessa_${Math.random().toString(36).substring(2)}`;
 
     try {
       // --- Step 1: Create the Order ---
@@ -217,6 +236,8 @@ const CheckoutForm = () => {
     const onClose = () => {
       showToast("Payment window closed.", "warning");
       setIsProcessing(false);
+      // Generate a new reference for the next attempt so we don't duplicate
+      setReference(`dessa_${Math.random().toString(36).substring(2)}`);
     };
 
     initializePayment({

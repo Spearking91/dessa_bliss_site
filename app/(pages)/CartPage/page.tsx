@@ -352,12 +352,13 @@ const CartPage = () => {
                       >
                         <td className="py-4 px-4 lg:px-6">
                           <div className="flex items-center gap-3 sm:gap-4">
-                            <div className="avatar">
-                              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-md bg-base-200">
+                            <div className="avatar relative">
+                              <div className="w-14 h-14  sm:w-16 sm:h-16 rounded-md bg-base-200">
                                 <Image
                                   src={item.product.image || "/logo2.png"}
                                   alt={item.product.name}
                                   className="object-cover"
+                                  fill
                                 />
                               </div>
                             </div>

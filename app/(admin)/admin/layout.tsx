@@ -26,10 +26,11 @@ export default function AdminLayout({
       ) : (
         <AdminProtectedRoute>
           <div className="flex min-h-screen bg-background">
-            <AdminSidebar />
-            <main className="flex-1 overflow-auto">
-              <div className="p-6 max-w-7xl mx-auto">{children}</div>
-            </main>
+            <AdminSidebar>
+              <main className="flex-1 overflow-auto">
+                <div className="p-6 max-w-7xl mx-auto">{children}</div>
+              </main>
+            </AdminSidebar>
           </div>
         </AdminProtectedRoute>
       )}
