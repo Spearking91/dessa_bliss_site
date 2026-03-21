@@ -1,16 +1,15 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { Search, ShoppingCart, Eye } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, ShoppingCart, Eye, Loader2 } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface Order {
   id: string;
-  customer_name: string;
-  customer_email: string;
-  shipping_address: string | null;
+  shipping_address: any;
   status: string;
-  total: number;
+  total_amount: number;
   payment_status: string;
   items: string[];
   notes: string | null;
@@ -35,26 +34,34 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const { showToast: toast } = useToast();
 
-  const fetchOrders = useCallback(async () => {
-    let query = supabase
-      .from("orders")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (statusFilter !== "all") query = query.eq("status", statusFilter);
-    const { data, error } = await query;
-    if (error) toast("Error", "error", error.message);
-    else setOrders((data || []) as unknown as Order[]);
-  }, [toast, statusFilter]);
+  const {
+    data: orders = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin_orders", statusFilter],
+    queryFn: async () => {
+      let query = supabase
+        .from("orders")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (statusFilter !== "all") query = query.eq("status", statusFilter);
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+      return (data || []) as unknown as Order[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   useEffect(() => {
-    fetchOrders();
-  }, [fetchOrders]);
+    if (error) toast("Error", "error", (error as Error).message);
+  }, [error, toast]);
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase
@@ -67,22 +74,28 @@ const AdminOrders = () => {
     if (error) toast("Error", "error", error.message);
     else {
       toast("Status updated", "success");
-      fetchOrders();
+      refetch();
     }
   };
 
-  const filtered = orders.filter(
-    (o) =>
-      o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
-      o.customer_email.toLowerCase().includes(search.toLowerCase()) ||
-      o.id.toLowerCase().includes(search.toLowerCase()),
-  );
+  const filtered = orders.filter((o) => {
+    const searchLower = search.toLowerCase();
+    const customerName =
+      `${o.shipping_address?.firstName || ""} ${o.shipping_address?.lastName || ""}`.toLowerCase();
+    return (
+      customerName.includes(searchLower) ||
+      (o.shipping_address?.email || "").toLowerCase().includes(searchLower) ||
+      (o.id || "").toLowerCase().includes(searchLower)
+    );
+  });
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Orders</h1>
-        <p className="text-muted-foreground">{orders.length} total orders</p>
+          <p className="text-muted-foreground">
+            {orders.length} total orders {isLoading && "(Updating...)"}
+          </p>
       </div>
 
       <div className="flex gap-4 flex-wrap">
@@ -125,7 +138,19 @@ const AdminOrders = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {isLoading && orders.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span>Loading orders...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -143,20 +168,23 @@ const AdminOrders = () => {
                       </td>
                       <td>
                         <p className="font-medium text-foreground">
-                          {order.customer_name}
+                          {order.shipping_address?.firstName}{" "}
+                          {order.shipping_address?.lastName}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {order.customer_email}
+                          {order.shipping_address?.email}
                         </p>
                       </td>
                       <td className="text-foreground">
-                        ${order.total.toFixed(2)}
+                        ${(order.total_amount || 0).toFixed(2)}
                       </td>
                       <td>
                         <span
-                          className={`badge ${order.payment_status === "paid" ? "badge-success" : "badge-warning"}`}
+                          className={`badge ${order.payment_status === "success" ? "badge-success" : "badge-warning"}`}
                         >
-                          {order.payment_status}
+                          {order.payment_status === "success"
+                            ? "Paid"
+                            : order.payment_status}
                         </span>
                       </td>
                       <td>
@@ -213,11 +241,16 @@ const AdminOrders = () => {
                 </div>
                 <div>
                   <span className="text-muted-foreground">Customer</span>
-                  <p className="text-foreground">{viewOrder.customer_name}</p>
+                  <p className="text-foreground">
+                    {viewOrder.shipping_address?.firstName}{" "}
+                    {viewOrder.shipping_address?.lastName}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Email</span>
-                  <p className="text-foreground">{viewOrder.customer_email}</p>
+                  <p className="text-foreground">
+                    {viewOrder.shipping_address?.email}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status</span>
@@ -238,13 +271,26 @@ const AdminOrders = () => {
                 <div className="col-span-2">
                   <span className="text-muted-foreground">Shipping</span>
                   <p className="text-foreground">
-                    {viewOrder.shipping_address || "—"}
+                    {typeof viewOrder.shipping_address === "object" &&
+                    viewOrder.shipping_address !== null ? (
+                      <>
+                        {viewOrder.shipping_address.address}
+                        <br />
+                        {viewOrder.shipping_address.city},{" "}
+                        {viewOrder.shipping_address.state}{" "}
+                        {viewOrder.shipping_address.zipCode}
+                        <br />
+                        {viewOrder.shipping_address.country}
+                      </>
+                    ) : (
+                      viewOrder.shipping_address || "—"
+                    )}
                   </p>
                 </div>
                 <div className="col-span-2">
                   <span className="text-muted-foreground">Total</span>
                   <p className="text-lg font-bold text-foreground">
-                    ${viewOrder.total.toFixed(2)}
+                    ${(viewOrder.total_amount || 0).toFixed(2)}
                   </p>
                 </div>
               </div>

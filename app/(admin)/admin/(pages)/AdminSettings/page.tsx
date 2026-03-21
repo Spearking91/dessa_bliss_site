@@ -9,7 +9,7 @@ const AdminSettings = () => {
   const [storeSettings, setStoreSettings] = useState({
     name: "My E-Commerce Store",
     email: "store@example.com",
-    currency: "USD",
+    currency: "GH₵",
     taxRate: "7.5",
   });
 
@@ -98,10 +98,8 @@ const AdminSettings = () => {
                       }))
                     }
                   >
+                    <option value="GHS">GHC (₵)</option>
                     <option value="USD">USD ($)</option>
-                    <option value="EUR">EUR (€)</option>
-                    <option value="GBP">GBP (£)</option>
-                    <option value="NGN">NGN (₦)</option>
                   </select>
                 </div>
                 <div className="form-control">

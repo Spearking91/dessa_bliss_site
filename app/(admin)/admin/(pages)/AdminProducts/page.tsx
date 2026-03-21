@@ -736,7 +736,7 @@
 
 
 "use client";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Plus,
   Pencil,
@@ -746,11 +746,13 @@ import {
   Package,
   X,
   Upload,
+  Loader2,
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
 import Image from "next/image";
 import { useToast } from "@/app/context/ToastContext";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface AdminProduct {
   id: string;
@@ -792,7 +794,6 @@ const categories = [
 ];
 
 const AdminProducts = () => {
-  const [products, setProducts] = useState<AdminProduct[]>([]);
   const [search, setSearch] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
@@ -807,23 +808,27 @@ const AdminProducts = () => {
   const { user } = useAdminAuth();
   const { showToast: toast } = useToast();
 
-  const fetchProducts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("admin_products")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      toast("Error", "error", error.message);
-      console.error("Fetch error:", error);
-    } else {
-      setProducts((data || []) as unknown as AdminProduct[]);
-    }
-  }, [toast]);
+  const {
+    data: products = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin_products"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("admin_products")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data || []) as unknown as AdminProduct[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   useEffect(() => {
-    fetchProducts();
-  }, [fetchProducts]);
+    if (error) toast("Error", "error", (error as Error).message);
+  }, [error, toast]);
 
   const openCreate = () => {
     setEditingProduct(null);
@@ -921,7 +926,7 @@ const AdminProducts = () => {
 
     setLoading(false);
     setIsFormOpen(false);
-    fetchProducts();
+    refetch();
   };
 
   const handleDelete = async () => {
@@ -930,7 +935,7 @@ const AdminProducts = () => {
     if (error) toast("Error", "error", error.message);
     else toast("Product deleted", "success");
     setDeleteId(null);
-    fetchProducts();
+    refetch();
   };
 
   const addImage = async () => {
@@ -974,7 +979,8 @@ const AdminProducts = () => {
         <div>
           <h1 className="text-3xl lg:text-4xl font-bold">Product Catalog</h1>
           <div className="mt-1.5 text-sm opacity-70">
-            {products.length} products · {lowStockProducts.length} low stock alert
+            {products.length} products · {lowStockProducts.length} low stock
+            alert {isLoading && "(Updating...)"}
           </div>
         </div>
         <button onClick={openCreate} className="btn btn-primary gap-2 px-6">
@@ -1026,7 +1032,16 @@ const AdminProducts = () => {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 ? (
+              {isLoading && products.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-16">
+                    <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                      <span>Loading products...</span>
+                    </div>
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="text-center py-16">
                     <Package className="mx-auto h-16 w-16 mb-4 opacity-40" />

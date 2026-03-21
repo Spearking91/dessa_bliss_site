@@ -44,7 +44,7 @@ export default function AdminAuth() {
   useEffect(() => {
     if (!authLoading && session) {
       // User is logged in, redirect to homepage
-      router.push("/Homepage");
+      router.push("/");
     }
   }, [session, authLoading, router]);
 
@@ -60,7 +60,7 @@ export default function AdminAuth() {
       alert(error.message);
     } else {
       setLoading(false);
-      router.push("/Homepage");
+      router.push("/");
     }
   };
   // TODO: Implement actual sign-up logic for admin users, similar to handleSignIn

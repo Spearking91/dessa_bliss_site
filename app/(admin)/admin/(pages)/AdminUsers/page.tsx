@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
-import { Search, Users as UsersIcon, Eye, Trash2 } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Users as UsersIcon, Eye, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
+import { useQuery } from "@tanstack/react-query";
 
 interface AppUser {
   id: string;
@@ -13,27 +14,32 @@ interface AppUser {
 }
 
 const AdminUsers = () => {
-  const [users, setUsers] = useState<AppUser[]>([]);
   const [search, setSearch] = useState("");
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [viewUser, setViewUser] = useState<AppUser | null>(null);
   const { showToast: toast } = useToast();
 
-  const fetchUsers = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("users")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) {
-      toast("Error", "error", error.message);
-    } else {
-      setUsers(data || []);
-    }
-  }, [toast]);
+  const {
+    data: users = [],
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["admin_users"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw new Error(error.message);
+      return (data || []) as unknown as AppUser[];
+    },
+    staleTime: 1000 * 60 * 5,
+  });
 
   useEffect(() => {
-    fetchUsers();
-  }, [fetchUsers]);
+    if (error) toast("Error", "error", (error as Error).message);
+  }, [error, toast]);
 
   const handleDelete = async () => {
     if (!deleteId) return;
@@ -41,7 +47,7 @@ const AdminUsers = () => {
     if (error) toast("Error", "error", error.message);
     else toast("User deleted", "success");
     setDeleteId(null);
-    fetchUsers();
+    refetch();
   };
 
   const filtered = users.filter(
@@ -54,7 +60,9 @@ const AdminUsers = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Users</h1>
-        <p className="text-muted-foreground">{users.length} registered users</p>
+          <p className="text-muted-foreground">
+            {users.length} registered users {isLoading && "(Updating...)"}
+          </p>
       </div>
 
       <div className="relative max-w-sm">
@@ -80,7 +88,19 @@ const AdminUsers = () => {
                 </tr>
               </thead>
               <tbody>
-                {filtered.length === 0 ? (
+                {isLoading && users.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="text-center py-8 text-muted-foreground"
+                    >
+                      <div className="flex flex-col items-center gap-2">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        <span>Loading users...</span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td
                       colSpan={4}

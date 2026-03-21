@@ -53,11 +53,9 @@ const CheckoutForm = () => {
     useState<PaymentMethod>("credit-card");
   const [billingIsSameAsShipping, setBillingIsSameAsShipping] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [reference, setReference] = useState("");
-
-  useEffect(() => {
-    setReference(`dessa_${Math.random().toString(36).substring(2)}`);
-  }, []);
+  const [reference, setReference] = useState(
+    () => `dessa_${Math.random().toString(36).substring(2)}`,
+  );
 
   const handleAddressChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -194,6 +192,10 @@ const CheckoutForm = () => {
         amount: total,
         reference: reference,
         status: "pending",
+        metadata: {
+          cart,
+          shipping_address: addressData,
+        },
       });
 
       if (paymentError) throw paymentError;
@@ -223,13 +225,14 @@ const CheckoutForm = () => {
         showToast("Payment Verified and Order Completed!", "success");
         clearCart();
         router.push(`/order-confirmation?ref=${paystackResponse.reference}`);
-      } else {
-        showToast(
-          "Payment verification failed.",
-          "error",
-          "Please contact support with your payment reference.",
-        );
+        return;
       }
+
+      showToast(
+        "Payment verification failed.",
+        "error",
+        "Please contact support with your payment reference.",
+      );
       setIsProcessing(false);
     };
 
@@ -240,10 +243,7 @@ const CheckoutForm = () => {
       setReference(`dessa_${Math.random().toString(36).substring(2)}`);
     };
 
-    initializePayment({
-      onSuccess,
-      onClose,
-    });
+    initializePayment({ onSuccess, onClose });
   };
 
   useEffect(() => {

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 
 import {
   Users,
@@ -28,11 +29,12 @@ import {
 } from "recharts";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 import { supabase } from "@/utils/supabase/supabase_client";
+import { useToast } from "@/app/context/ToastContext";
 
 interface Order {
   id: string;
   status: string;
-  total: number | null;
+  total_amount: number | null;
 }
 
 interface Product {
@@ -116,40 +118,33 @@ const MetricCard = ({
 
 const AdminDashboard = () => {
   const { role, user } = useAdminAuth();
-  const [metrics, setMetrics] = useState({
-    totalUsers: 0,
-    totalProducts: 0,
-    totalOrders: 0,
-    totalRevenue: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    cancelledOrders: 0,
-    lowStock: 0,
-  });
-  const [categoryDist, setCategoryDist] = useState<
-    { name: string; value: number; fill: string }[]
-  >([]);
+  const { showToast } = useToast();
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
+  const {
+    data: dashboardData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admin_dashboard_metrics"],
+    queryFn: async () => {
       const [usersRes, productsRes, ordersRes, lowStockRes] = await Promise.all(
         [
           supabase.from("users").select("id", { count: "exact", head: true }),
-          supabase.from("products").select("id, category", { count: "exact" }),
+          supabase.from("admin_products").select("id, category", { count: "exact" }),
           supabase
             .from("orders")
-            .select("id, status, total", { count: "exact" }),
+            .select("id, status, total_amount", { count: "exact" }),
           supabase
-            .from("products")
+            .from("admin_products")
             .select("id", { count: "exact", head: true })
-            .lte("stock", 5)
+            .lte("stock_quantity", 5)
             .eq("status", "active"),
         ],
       );
 
       const orders: Order[] = (ordersRes.data as Order[]) || [];
       const revenue = orders.reduce(
-        (sum: number, o: Order) => sum + Number(o.total || 0),
+        (sum: number, o: Order) => sum + Number(o.total_amount || 0),
         0,
       );
       const pending = orders.filter(
@@ -175,22 +170,48 @@ const AdminDashboard = () => {
         fill: categoryColors[i % categoryColors.length],
       }));
 
-      setMetrics({
-        totalUsers: usersRes.count || 0,
-        totalProducts: productsRes.count || 0,
-        totalOrders: ordersRes.count || 0,
-        totalRevenue: revenue,
-        pendingOrders: pending,
-        completedOrders: completed,
-        cancelledOrders: cancelled,
-        lowStock: lowStockRes.count || 0,
-      });
-      setCategoryDist(dist);
-    };
-    fetchMetrics();
-  }, []);
+      return {
+        metrics: {
+          totalUsers: usersRes.count || 0,
+          totalProducts: productsRes.count || 0,
+          totalOrders: ordersRes.count || 0,
+          totalRevenue: revenue,
+          pendingOrders: pending,
+          completedOrders: completed,
+          cancelledOrders: cancelled,
+          lowStock: lowStockRes.count || 0,
+        },
+        categoryDist: dist,
+      };
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  const m = metrics;
+  useEffect(() => {
+    if (error) {
+      showToast("Error", "error", (error as Error).message);
+    }
+  }, [error, showToast]);
+
+  const m = useMemo(
+    () =>
+      dashboardData?.metrics || {
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        cancelledOrders: 0,
+        lowStock: 0,
+      },
+    [dashboardData],
+  );
+
+  const categoryDist = useMemo(
+    () => dashboardData?.categoryDist || [],
+    [dashboardData],
+  );
 
   return (
     <div className="space-y-6">
@@ -199,6 +220,7 @@ const AdminDashboard = () => {
         <p className="text-muted-foreground">
           Welcome back, {user?.email} ·{" "}
           <span className="capitalize">{role?.replace("_", " ")}</span>
+          {isLoading && " (Loading...)"}
         </p>
       </div>
 
@@ -210,7 +232,7 @@ const AdminDashboard = () => {
         />
         <MetricCard
           title="Total Revenue"
-          value={`$${m.totalRevenue.toLocaleString()}`}
+          value={`₵ ${m.totalRevenue.toLocaleString()}`}
           icon={DollarSign}
           variant="success"
         />

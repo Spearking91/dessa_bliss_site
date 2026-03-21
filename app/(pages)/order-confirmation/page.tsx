@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
 import { Loader2, Download, Home } from "lucide-react";
-import html2canvas from "html2canvas";
+import html2canvas from "html2canvas-pro";
 
 // Define the type for the payment data
 type PaymentData = {
@@ -114,21 +114,26 @@ const OrderConfirmationPage = () => {
 
     showToast("Generating PDF...", "info");
     try {
-      const canvas = await html2canvas(input, { scale: 2 });
+      const canvas = await html2canvas(input, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
 
       // @ts-ignore
       const { jsPDF } = await import("jspdf/dist/jspdf.es.min.js");
       const pdf = new jsPDF({
         orientation: "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
+        unit: "mm",
+        format: "a4",
       });
 
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight);
       pdf.save(`receipt-${payment?.reference}.pdf`);
       showToast("Receipt downloaded.", "success");
     } catch (e) {
+      console.error(e);
       showToast(
         "Failed to download PDF.",
         "error",
@@ -176,15 +181,17 @@ const OrderConfirmationPage = () => {
           </p>
         </div>
 
-        <div ref={receiptRef} className="bg-base-100 shadow-lg rounded-lg p-8">
+        <div ref={receiptRef} className="bg-white shadow-lg rounded-lg p-8">
           <div className="flex justify-between items-start mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-primary">Dessa Bliss</h2>
-              <p className="text-base-content/70">Order Receipt</p>
+              <h2 className="text-2xl font-bold text-purple-600">
+                Dessa Bliss
+              </h2>
+              <p className="text-gray-500">Order Receipt</p>
             </div>
             <div className="text-right">
-              <p className="font-semibold">Order #{reference}</p>
-              <p className="text-sm text-base-content/70">
+              <p className="font-semibold text-gray-900">Order #{reference}</p>
+              <p className="text-sm text-gray-500">
                 Date: {new Date(created_at).toLocaleDateString()}
               </p>
             </div>
@@ -192,10 +199,8 @@ const OrderConfirmationPage = () => {
 
           <div className="grid grid-cols-2 gap-8 mb-8">
             <div>
-              <h3 className="font-semibold text-base-content mb-2">
-                Billed To:
-              </h3>
-              <p className="text-base-content/80">
+              <h3 className="font-semibold text-gray-900 mb-2">Billed To:</h3>
+              <p className="text-gray-600">
                 {shipping_address.firstName} {shipping_address.lastName}
                 <br />
                 {shipping_address.address}
@@ -209,13 +214,13 @@ const OrderConfirmationPage = () => {
               </p>
             </div>
             <div className="text-right">
-              <h3 className="font-semibold text-base-content mb-2">
+              <h3 className="font-semibold text-gray-900 mb-2">
                 Payment Details:
               </h3>
-              <p className="text-base-content/80">
+              <p className="text-gray-600">
                 Payment Method: Card/Momo
                 <br />
-                Status: <span className="font-bold text-success">Paid</span>
+                Status: <span className="font-bold text-green-600">Paid</span>
               </p>
             </div>
           </div>
@@ -223,25 +228,33 @@ const OrderConfirmationPage = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead>
-                <tr className="border-b-2 border-base-300">
-                  <th className="py-2 font-semibold">Item</th>
-                  <th className="py-2 font-semibold text-center">Quantity</th>
-                  <th className="py-2 font-semibold text-right">Price</th>
-                  <th className="py-2 font-semibold text-right">Total</th>
+                <tr className="border-b-2 border-gray-300">
+                  <th className="py-2 font-semibold text-gray-900">Item</th>
+                  <th className="py-2 font-semibold text-center text-gray-900">
+                    Quantity
+                  </th>
+                  <th className="py-2 font-semibold text-right text-gray-900">
+                    Price
+                  </th>
+                  <th className="py-2 font-semibold text-right text-gray-900">
+                    Total
+                  </th>
                 </tr>
               </thead>
               <tbody>
                 {cart.map((item) => (
                   <tr
                     key={item.product.id}
-                    className="border-b border-base-200"
+                    className="border-b border-gray-200"
                   >
-                    <td className="py-4">{item.product.name}</td>
-                    <td className="py-4 text-center">{item.quantity}</td>
-                    <td className="py-4 text-right">
+                    <td className="py-4 text-gray-800">{item.product.name}</td>
+                    <td className="py-4 text-center text-gray-800">
+                      {item.quantity}
+                    </td>
+                    <td className="py-4 text-right text-gray-800">
                       GH₵{item.product.price.toFixed(2)}
                     </td>
-                    <td className="py-4 text-right">
+                    <td className="py-4 text-right text-gray-800">
                       GH₵{(item.product.price * item.quantity).toFixed(2)}
                     </td>
                   </tr>
@@ -252,20 +265,20 @@ const OrderConfirmationPage = () => {
 
           <div className="flex justify-end mt-8">
             <div className="w-full max-w-xs">
-              <div className="flex justify-between text-base-content/80">
+              <div className="flex justify-between text-gray-600">
                 <span>Subtotal</span>
                 <span>GH₵{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-base-content/80">
+              <div className="flex justify-between text-gray-600">
                 <span>Shipping</span>
                 <span>GH₵{shipping.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-base-content/80">
+              <div className="flex justify-between text-gray-600">
                 <span>Tax (7%)</span>
                 <span>GH₵{tax.toFixed(2)}</span>
               </div>
               <div className="divider my-2"></div>
-              <div className="flex justify-between font-bold text-xl">
+              <div className="flex justify-between font-bold text-xl text-gray-900">
                 <span>Total Paid</span>
                 <span>GH₵{amount.toFixed(2)}</span>
               </div>

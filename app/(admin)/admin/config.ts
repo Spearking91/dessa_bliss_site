@@ -35,7 +35,7 @@ export const navItems = [
   {
     label: "Activity Logs",
     icon: ScrollText,
-    path: "/admin/logs",
+    path: "/admin/AdminLogs",
     roles: ["admin", "super_admin"],
   },
   {
