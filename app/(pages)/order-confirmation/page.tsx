@@ -5,7 +5,6 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
 import { Loader2, Download, Home } from "lucide-react";
-import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 
 // Define the type for the payment data
@@ -118,6 +117,8 @@ const OrderConfirmationPage = () => {
       const canvas = await html2canvas(input, { scale: 2 });
       const imgData = canvas.toDataURL("image/png");
 
+      // @ts-ignore
+      const { jsPDF } = await import("jspdf/dist/jspdf.es.min.js");
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "px",
