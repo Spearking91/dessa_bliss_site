@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import dynamic from "next/dynamic";
+import dynamicImport from "next/dynamic";
 
 import {
   Users,
@@ -29,15 +29,18 @@ interface Product {
   category: string | null;
 }
 
-const RevenueChart = dynamic(
+// Force this page to be dynamic (skips static prerendering build errors)
+export const dynamic = "force-dynamic";
+
+const RevenueChart = dynamicImport(
   () => import("./Charts").then((mod) => mod.RevenueChart),
   { ssr: false },
 );
-const OrdersChart = dynamic(
+const OrdersChart = dynamicImport(
   () => import("./Charts").then((mod) => mod.OrdersChart),
   { ssr: false },
 );
-const CategoryChart = dynamic(
+const CategoryChart = dynamicImport(
   () => import("./Charts").then((mod) => mod.CategoryChart),
   { ssr: false },
 );
