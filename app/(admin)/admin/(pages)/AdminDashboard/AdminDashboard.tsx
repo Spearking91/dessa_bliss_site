@@ -1,5 +1,8 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useEffect, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import dynamicImport from "next/dynamic";
 
 import {
   Users,
@@ -12,33 +15,33 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 import { supabase } from "@/utils/supabase/supabase_client";
+import { useToast } from "@/app/context/ToastContext";
 
 interface Order {
   id: string;
   status: string;
-  total: number | null;
+  total_amount: number | null;
 }
 
 interface Product {
   id: string;
   category: string | null;
 }
+
+const RevenueChart = dynamicImport(
+  () => import("./Charts").then((mod) => mod.RevenueChart),
+  { ssr: false },
+);
+const OrdersChart = dynamicImport(
+  () => import("./Charts").then((mod) => mod.OrdersChart),
+  { ssr: false },
+);
+const CategoryChart = dynamicImport(
+  () => import("./Charts").then((mod) => mod.CategoryChart),
+  { ssr: false },
+);
 
 // Keep static chart data (would require aggregation queries for real data)
 const revenueData = [
@@ -116,40 +119,35 @@ const MetricCard = ({
 
 const AdminDashboard = () => {
   const { role, user } = useAdminAuth();
-  const [metrics, setMetrics] = useState({
-    totalUsers: 0,
-    totalProducts: 0,
-    totalOrders: 0,
-    totalRevenue: 0,
-    pendingOrders: 0,
-    completedOrders: 0,
-    cancelledOrders: 0,
-    lowStock: 0,
-  });
-  const [categoryDist, setCategoryDist] = useState<
-    { name: string; value: number; fill: string }[]
-  >([]);
+  const { showToast } = useToast();
 
-  useEffect(() => {
-    const fetchMetrics = async () => {
+  const {
+    data: dashboardData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["admin_dashboard_metrics"],
+    queryFn: async () => {
       const [usersRes, productsRes, ordersRes, lowStockRes] = await Promise.all(
         [
           supabase.from("users").select("id", { count: "exact", head: true }),
-          supabase.from("products").select("id, category", { count: "exact" }),
+          supabase
+            .from("admin_products")
+            .select("id, category", { count: "exact" }),
           supabase
             .from("orders")
-            .select("id, status, total", { count: "exact" }),
+            .select("id, status, total_amount", { count: "exact" }),
           supabase
-            .from("products")
+            .from("admin_products")
             .select("id", { count: "exact", head: true })
-            .lte("stock", 5)
+            .lte("stock_quantity", 5)
             .eq("status", "active"),
         ],
       );
 
       const orders: Order[] = (ordersRes.data as Order[]) || [];
       const revenue = orders.reduce(
-        (sum: number, o: Order) => sum + Number(o.total || 0),
+        (sum: number, o: Order) => sum + Number(o.total_amount || 0),
         0,
       );
       const pending = orders.filter(
@@ -175,22 +173,48 @@ const AdminDashboard = () => {
         fill: categoryColors[i % categoryColors.length],
       }));
 
-      setMetrics({
-        totalUsers: usersRes.count || 0,
-        totalProducts: productsRes.count || 0,
-        totalOrders: ordersRes.count || 0,
-        totalRevenue: revenue,
-        pendingOrders: pending,
-        completedOrders: completed,
-        cancelledOrders: cancelled,
-        lowStock: lowStockRes.count || 0,
-      });
-      setCategoryDist(dist);
-    };
-    fetchMetrics();
-  }, []);
+      return {
+        metrics: {
+          totalUsers: usersRes.count || 0,
+          totalProducts: productsRes.count || 0,
+          totalOrders: ordersRes.count || 0,
+          totalRevenue: revenue,
+          pendingOrders: pending,
+          completedOrders: completed,
+          cancelledOrders: cancelled,
+          lowStock: lowStockRes.count || 0,
+        },
+        categoryDist: dist,
+      };
+    },
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
-  const m = metrics;
+  useEffect(() => {
+    if (error) {
+      showToast("Error", "error", (error as Error).message);
+    }
+  }, [error, showToast]);
+
+  const m = useMemo(
+    () =>
+      dashboardData?.metrics || {
+        totalUsers: 0,
+        totalProducts: 0,
+        totalOrders: 0,
+        totalRevenue: 0,
+        pendingOrders: 0,
+        completedOrders: 0,
+        cancelledOrders: 0,
+        lowStock: 0,
+      },
+    [dashboardData],
+  );
+
+  const categoryDist = useMemo(
+    () => dashboardData?.categoryDist || [],
+    [dashboardData],
+  );
 
   return (
     <div className="space-y-6">
@@ -199,6 +223,7 @@ const AdminDashboard = () => {
         <p className="text-muted-foreground">
           Welcome back, {user?.email} ·{" "}
           <span className="capitalize">{role?.replace("_", " ")}</span>
+          {isLoading && " (Loading...)"}
         </p>
       </div>
 
@@ -210,7 +235,7 @@ const AdminDashboard = () => {
         />
         <MetricCard
           title="Total Revenue"
-          value={`$${m.totalRevenue.toLocaleString()}`}
+          value={`₵ ${m.totalRevenue.toLocaleString()}`}
           icon={DollarSign}
           variant="success"
         />
@@ -235,32 +260,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <TrendingUp className="h-5 w-5" /> Revenue Overview
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                  formatter={(value) =>
-                    typeof value === "number"
-                      ? [`$${value.toLocaleString()}`, "Revenue"]
-                      : [value, "Revenue"]
-                  }
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#570df8"
-                  strokeWidth={2}
-                  dot={{ fill: "#570df8" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <RevenueChart data={revenueData} />
           </div>
         </div>
 
@@ -269,21 +269,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <ShoppingCart className="h-5 w-5" /> Orders Overview
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ordersChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                />
-                <Bar dataKey="orders" fill="#570df8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <OrdersChart data={ordersChartData} />
           </div>
         </div>
       </div>
@@ -294,37 +280,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <Package className="h-5 w-5" /> Product Categories
             </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={categoryDist}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  // label={({
-                  //   name,
-                  //   percent,
-                  // }: {
-                  //   name: string | number | undefined;
-                  //   percent: number | undefined;
-                  // }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                  fontSize={11}
-                >
-                  {categoryDist.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <CategoryChart data={categoryDist} />
           </div>
         </div>
 
