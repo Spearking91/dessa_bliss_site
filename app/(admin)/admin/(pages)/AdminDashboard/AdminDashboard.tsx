@@ -1,4 +1,5 @@
 "use client";
+
 import { useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import dynamicImport from "next/dynamic";
