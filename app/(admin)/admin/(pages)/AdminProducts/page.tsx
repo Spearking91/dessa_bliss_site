@@ -773,7 +773,7 @@ interface AdminProduct {
 const emptyProduct = {
   name: "",
   description: "",
-  category: "Electronics",
+  category: "Diapers",
   price: 0,
   discount_price: null as number | null,
   sku: "",
@@ -784,13 +784,12 @@ const emptyProduct = {
 };
 
 const categories = [
-  "Electronics",
-  "Clothing",
-  "Home & Kitchen",
-  "Beauty",
-  "Sports",
-  "Books",
-  "Other",
+  "Diapers",
+  "Cutlery",
+  "Cups",
+  "Bowls",
+  "Kitchen Ware",
+  "Others",
 ];
 
 const AdminProducts = () => {

@@ -4,14 +4,18 @@ export interface Product {
   id: string;
   name: string;
   category: string;
+  description: string;
   price: number;
+  discount_price: number | null;
   colors: string[];
+  tags: string[];
   rating: number | null;
   reviews: number | null;
-  image: string | null;
+  images: string[];
   trending: boolean | null;
   created_at: string;
-  stock: number;
+  stock_quantity: number;
+
 }
 
 /**

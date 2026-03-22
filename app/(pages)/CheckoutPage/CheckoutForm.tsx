@@ -510,7 +510,7 @@ const CheckoutForm = () => {
                           <div className="w-14 h-14 rounded bg-base-200">
                             <Image
                               src={
-                                item.product.image || "/placeholder-image.png"
+                                item.product.images[0] || "/placeholder-image.png"
                               }
                               alt={item.product.name}
                               className="object-cover"

@@ -355,7 +355,7 @@ const CartPage = () => {
                             <div className="avatar relative">
                               <div className="w-14 h-14  sm:w-16 sm:h-16 rounded-md bg-base-200">
                                 <Image
-                                  src={item.product.image || "/logo2.png"}
+                                  src={item.product.images[0] || "/logo2.png"}
                                   alt={item.product.name}
                                   className="object-cover"
                                   fill
@@ -402,7 +402,8 @@ const CartPage = () => {
                                 )
                               }
                               disabled={
-                                item.quantity >= (item.product.stock ?? 999)
+                                item.quantity >=
+                                (item.product.stock_quantity ?? 999)
                               }
                             >
                               <PlusCircle size={16} />

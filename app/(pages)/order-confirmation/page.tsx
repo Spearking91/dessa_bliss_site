@@ -20,7 +20,7 @@ type PaymentData = {
         id: string;
         name: string;
         price: number;
-        images: string[];
+        image: string | null;
       };
       quantity: number;
     }[];

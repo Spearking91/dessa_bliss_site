@@ -587,11 +587,12 @@ export default function HomePage() {
   const itemsPerPage = 12;
   const router = useRouter();
 
-  const categories = ["All", ...new Set(allProducts.map((p) => p.category))];
+  const categories = ["All", ...new Set(products.map((p) => p.category))];
 
   const handleRetry = async () => {
     await refreshProducts(true);
   };
+ 
 
   // ────────────────────────────────────────────────
   //  Filtering + Sorting (memoized)
@@ -867,7 +868,7 @@ export default function HomePage() {
                     </div>
                   )}
                   <Image
-                    src={product.image || "/logo2.png"}
+                    src={product.images[0] || "/logo2.png"}
                     alt={product.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-500"
@@ -926,7 +927,7 @@ export default function HomePage() {
                     </div>
                   )}
                   <Image
-                    src={product.image || "/logo2.png"}
+                    src={product.images[0] || "/logo2.png"}
                     alt={product.name}
                     fill
                     className="object-cover group-hover:scale-105 transition-transform"

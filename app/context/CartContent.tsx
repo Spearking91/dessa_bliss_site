@@ -14,9 +14,9 @@ interface Product {
   id: string;
   name: string;
   price: number;
-  image: string | null;
+  images: string[];
   category: string;
-  stock: number;
+  stock_quantity: number;
 }
 
 interface CartItem {
