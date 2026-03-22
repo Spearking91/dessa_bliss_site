@@ -117,6 +117,7 @@ const MetricCard = ({
 };
 
 const AdminDashboard = () => {
+  const [mounted, setMounted] = useState(false);
   const { role, user } = useAdminAuth();
   const { showToast } = useToast();
 
@@ -188,6 +189,10 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (error) {
       showToast("Error", "error", (error as Error).message);
     }
@@ -212,6 +217,8 @@ const AdminDashboard = () => {
     () => dashboardData?.categoryDist || [],
     [dashboardData],
   );
+
+  if (!mounted) return null;
 
   return (
     <div className="space-y-6">
