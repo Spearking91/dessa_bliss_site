@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import dynamic from "next/dynamic";
 
 import {
   Users,
@@ -13,20 +14,6 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
@@ -41,6 +28,19 @@ interface Product {
   id: string;
   category: string | null;
 }
+
+const RevenueChart = dynamic(
+  () => import("./Charts").then((mod) => mod.RevenueChart),
+  { ssr: false },
+);
+const OrdersChart = dynamic(
+  () => import("./Charts").then((mod) => mod.OrdersChart),
+  { ssr: false },
+);
+const CategoryChart = dynamic(
+  () => import("./Charts").then((mod) => mod.CategoryChart),
+  { ssr: false },
+);
 
 // Keep static chart data (would require aggregation queries for real data)
 const revenueData = [
@@ -117,7 +117,6 @@ const MetricCard = ({
 };
 
 const AdminDashboard = () => {
-  const [mounted, setMounted] = useState(false);
   const { role, user } = useAdminAuth();
   const { showToast } = useToast();
 
@@ -131,7 +130,9 @@ const AdminDashboard = () => {
       const [usersRes, productsRes, ordersRes, lowStockRes] = await Promise.all(
         [
           supabase.from("users").select("id", { count: "exact", head: true }),
-          supabase.from("admin_products").select("id, category", { count: "exact" }),
+          supabase
+            .from("admin_products")
+            .select("id, category", { count: "exact" }),
           supabase
             .from("orders")
             .select("id, status, total_amount", { count: "exact" }),
@@ -189,10 +190,6 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
     if (error) {
       showToast("Error", "error", (error as Error).message);
     }
@@ -217,8 +214,6 @@ const AdminDashboard = () => {
     () => dashboardData?.categoryDist || [],
     [dashboardData],
   );
-
-  if (!mounted) return null;
 
   return (
     <div className="space-y-6">
@@ -264,32 +259,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <TrendingUp className="h-5 w-5" /> Revenue Overview
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                  formatter={(value) =>
-                    typeof value === "number"
-                      ? [`$${value.toLocaleString()}`, "Revenue"]
-                      : [value, "Revenue"]
-                  }
-                />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#570df8"
-                  strokeWidth={2}
-                  dot={{ fill: "#570df8" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <RevenueChart data={revenueData} />
           </div>
         </div>
 
@@ -298,21 +268,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <ShoppingCart className="h-5 w-5" /> Orders Overview
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={ordersChartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#94a3b8" fontSize={12} />
-                <YAxis stroke="#94a3b8" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                />
-                <Bar dataKey="orders" fill="#570df8" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            <OrdersChart data={ordersChartData} />
           </div>
         </div>
       </div>
@@ -323,37 +279,7 @@ const AdminDashboard = () => {
             <h2 className="card-title flex items-center gap-2 text-foreground">
               <Package className="h-5 w-5" /> Product Categories
             </h2>
-            <ResponsiveContainer width="100%" height={250}>
-              <PieChart>
-                <Pie
-                  data={categoryDist}
-                  dataKey="value"
-                  nameKey="name"
-                  cx="50%"
-                  cy="50%"
-                  outerRadius={80}
-                  // label={({
-                  //   name,
-                  //   percent,
-                  // }: {
-                  //   name: string | number | undefined;
-                  //   percent: number | undefined;
-                  // }) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
-                  fontSize={11}
-                >
-                  {categoryDist.map((entry, i) => (
-                    <Cell key={i} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#fff",
-                    borderRadius: "8px",
-                    color: "#000",
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+            <CategoryChart data={categoryDist} />
           </div>
         </div>
 
