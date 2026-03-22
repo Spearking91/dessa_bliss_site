@@ -30,8 +30,6 @@ interface Product {
   category: string | null;
 }
 
-// Force this page to be dynamic (skips static prerendering build errors)
-export const dynamic = "force-dynamic";
 
 const RevenueChart = dynamicImport(
   () => import("./Charts").then((mod) => mod.RevenueChart),
