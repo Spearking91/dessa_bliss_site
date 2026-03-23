@@ -1,6 +1,7 @@
-// page.tsx (SERVER component)
 import AdminDashboard from "./AdminDashboard";
 
-export default function Page() {
+export const dynamic = "force-dynamic";
+
+export default function AdminDashboardPage() {
   return <AdminDashboard />;
 }

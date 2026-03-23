@@ -1,3 +1,4 @@
+"use client";
 import Lottie from "lottie-react";
 import LoadingIcon from "@/public/lottie/loading2.json";
 const Loading = () => {
