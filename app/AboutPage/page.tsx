@@ -30,7 +30,7 @@ const values = [
 
 const AboutPage = () => {
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-base-300 px-20">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-base-100 px-20">
       {/* Hero */}
       <section className="bg-muted py-16">
         <div className="container max-w-3xl text-center">
@@ -64,7 +64,7 @@ const AboutPage = () => {
           </div>
           <div className="rounded-xl overflow-hidden aspect-[4/3]">
             <Image
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80"
+              src="https://envtrhoejcgwywoarjej.supabase.co/storage/v1/object/public/product-images/original-2a0ff8cef7ba08b4f1503c4236b84072.webp-DessaImage-1774126556587"
               alt="Our team collaborating"
               className="w-full h-full object-cover"
               width={800}

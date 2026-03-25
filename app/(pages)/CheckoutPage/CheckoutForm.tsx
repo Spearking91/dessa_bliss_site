@@ -51,7 +51,9 @@ const CheckoutForm = () => {
 
   const [paymentMethod, setPaymentMethod] =
     useState<PaymentMethod>("credit-card");
-  const [billingIsSameAsShipping, setBillingIsSameAsShipping] = useState(true);
+  const [deliveryMode, setDeliveryMode] = useState<"delivery" | "pickup">(
+    "pickup",
+  );
   const [isProcessing, setIsProcessing] = useState(false);
   const [reference, setReference] = useState(
     () => `dessa_${Math.random().toString(36).substring(2)}`,
@@ -65,8 +67,8 @@ const CheckoutForm = () => {
   };
 
   const subtotal = getCartTotal();
-  const shipping = subtotal > 100 ? 0 : 10;
-  const tax = subtotal * 0.07;
+  const shipping = deliveryMode === "pickup" ? 0 : subtotal > 200 ? 0 : 20; // Default delivery fee of GH₵20 if under GH₵200
+  const tax = subtotal * 0.0195;
   const total = subtotal + shipping + tax;
 
   const verifyOnServer = async (ref: string) => {
@@ -127,17 +129,17 @@ const CheckoutForm = () => {
     e.preventDefault();
     setIsProcessing(true);
 
-    const requiredFields: (keyof AddressFormData)[] = [
+    let requiredFields: (keyof AddressFormData)[] = [
       "firstName",
       "lastName",
       "email",
-      "address",
-      "city",
-      "state",
-      "zipCode",
       "country",
       "phone",
     ];
+
+    // if (deliveryMode === "delivery") {
+    //   requiredFields = [...requiredFields, "address", "city", "state"];
+    // }
 
     const missingFields = requiredFields.filter((field) => !addressData[field]);
     if (missingFields.length > 0) {
@@ -160,8 +162,12 @@ const CheckoutForm = () => {
           user_id: user?.id,
           total_amount: total,
           status: "pending",
-          shipping_address: addressData,
-          billing_address: billingIsSameAsShipping ? addressData : {},
+          delivery_mode: deliveryMode,
+          shipping_address:
+            deliveryMode === "pickup"
+              ? { ...addressData, address: "STORE PICKUP" }
+              : addressData,
+          billing_address: addressData,
         })
         .select()
         .single();
@@ -194,7 +200,8 @@ const CheckoutForm = () => {
         status: "pending",
         metadata: {
           cart,
-          shipping_address: addressData,
+          delivery_mode: deliveryMode,
+          address_details: addressData,
         },
       });
 
@@ -291,7 +298,11 @@ const CheckoutForm = () => {
               <div className="card-body">
                 <div className="flex items-center gap-3 mb-6">
                   <MapPin className="text-primary" size={24} />
-                  <h2 className="card-title text-xl">Shipping Information</h2>
+                  <h2 className="card-title text-xl">
+                    {deliveryMode === "delivery"
+                      ? "Shipping Information"
+                      : "Contact Information"}
+                  </h2>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -360,65 +371,54 @@ const CheckoutForm = () => {
                     />
                   </div>
 
-                  <div className="md:col-span-2 form-control">
-                    <label className="label">
-                      <span className="label-text">
-                        Address <span className="text-error">*</span>
-                      </span>
-                    </label>
-                    <input
-                      name="address"
-                      value={addressData.address}
-                      onChange={handleAddressChange}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
+                  {deliveryMode === "delivery" && (
+                    <>
+                      <div className="md:col-span-2 form-control">
+                        <label className="label">
+                          <span className="label-text">
+                            Address <span className="text-error">*</span>
+                          </span>
+                        </label>
+                        <input
+                          name="address"
+                          value={addressData.address}
+                          onChange={handleAddressChange}
+                          className="input input-bordered w-full"
+                          required
+                        />
+                      </div>
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">
-                        City <span className="text-error">*</span>
-                      </span>
-                    </label>
-                    <input
-                      name="city"
-                      value={addressData.city}
-                      onChange={handleAddressChange}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">
+                            City <span className="text-error">*</span>
+                          </span>
+                        </label>
+                        <input
+                          name="city"
+                          value={addressData.city}
+                          onChange={handleAddressChange}
+                          className="input input-bordered w-full"
+                          required
+                        />
+                      </div>
 
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">
-                        State/Region <span className="text-error">*</span>
-                      </span>
-                    </label>
-                    <input
-                      name="state"
-                      value={addressData.state}
-                      onChange={handleAddressChange}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
-
-                  <div className="form-control">
-                    <label className="label">
-                      <span className="label-text">
-                        Postal Code <span className="text-error">*</span>
-                      </span>
-                    </label>
-                    <input
-                      name="zipCode"
-                      value={addressData.zipCode}
-                      onChange={handleAddressChange}
-                      className="input input-bordered w-full"
-                      required
-                    />
-                  </div>
+                      <div className="form-control">
+                        <label className="label">
+                          <span className="label-text">
+                            State/Region <span className="text-error">*</span>
+                          </span>
+                        </label>
+                        <input
+                          name="state"
+                          value={addressData.state}
+                          onChange={handleAddressChange}
+                          className="input input-bordered w-full"
+                          required
+                        />
+                      </div>
+                    </>
+                  )}
 
                   <div className="form-control">
                     <label className="label">
@@ -436,6 +436,54 @@ const CheckoutForm = () => {
                       <option value="Ghana">Ghana</option>
                     </select>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Delivery Method Selection */}
+            <div className="card bg-base-100 shadow-xl">
+              <div className="card-body">
+                <div className="flex items-center gap-3 mb-6">
+                  <MapPin className="text-primary" size={24} />
+                  <h2 className="card-title text-xl">Delivery Method</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* <label
+                    className={`label cursor-pointer justify-start gap-4 rounded-lg border p-4 hover:bg-base-200 transition-all ${deliveryMode === "delivery" ? "border-primary bg-primary/5" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="deliveryMode"
+                      className="radio radio-primary"
+                      checked={deliveryMode === "delivery"}
+                      onChange={() => setDeliveryMode("delivery")}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-bold">Home Delivery</span>
+                      <span className="text-xs opacity-70">
+                        Doorstep delivery (GH₵20 fee may apply)
+                      </span>
+                    </div>
+                  </label> */}
+
+                  <label
+                    className={`label cursor-pointer justify-start gap-4 rounded-lg border p-4 hover:bg-base-200 transition-all ${deliveryMode === "pickup" ? "border-primary bg-primary/5" : ""}`}
+                  >
+                    <input
+                      type="radio"
+                      name="deliveryMode"
+                      className="radio radio-primary"
+                      checked={deliveryMode === "pickup"}
+                      onChange={() => setDeliveryMode("pickup")}
+                    />
+                    <div className="flex flex-col">
+                      <span className="font-bold">Self Pickup</span>
+                      <span className="text-xs opacity-70">
+                        Collect from our office (Free)
+                      </span>
+                    </div>
+                  </label>
                 </div>
               </div>
             </div>
@@ -465,32 +513,6 @@ const CheckoutForm = () => {
 
                   {/* You can add more payment options here later */}
                 </div>
-
-                <div className="mt-6">
-                  <label className="label cursor-pointer justify-start gap-3">
-                    <input
-                      type="checkbox"
-                      checked={billingIsSameAsShipping}
-                      onChange={() =>
-                        setBillingIsSameAsShipping(!billingIsSameAsShipping)
-                      }
-                      className="checkbox checkbox-primary"
-                    />
-                    <span className="label-text">
-                      Billing address same as shipping address
-                    </span>
-                  </label>
-                </div>
-
-                {!billingIsSameAsShipping && (
-                  <div className="mt-8 pt-6 border-t">
-                    <h3 className="font-semibold mb-4">Billing Address</h3>
-                    <p className="text-sm opacity-70 mb-4">
-                      (Billing address form fields can be added here when
-                      needed)
-                    </p>
-                  </div>
-                )}
               </div>
             </div>
 
@@ -510,7 +532,8 @@ const CheckoutForm = () => {
                           <div className="w-14 h-14 rounded bg-base-200">
                             <Image
                               src={
-                                item.product.images[0] || "/placeholder-image.png"
+                                item.product.images[0] ||
+                                "/placeholder-image.png"
                               }
                               alt={item.product.name}
                               className="object-cover"
@@ -540,14 +563,14 @@ const CheckoutForm = () => {
                     <span className="opacity-70">Subtotal</span>
                     <span>GH₵{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="opacity-70">Shipping</span>
+                  {/* <div className="flex justify-between">
+                    <span className="opacity-70">Delivery</span>
                     <span className={shipping === 0 ? "text-success" : ""}>
                       {shipping === 0 ? "Free" : `GH₵${shipping.toFixed(2)}`}
                     </span>
-                  </div>
+                  </div> */}
                   <div className="flex justify-between">
-                    <span className="opacity-70">Tax (7%)</span>
+                    <span className="opacity-70">Tax (1.95%)</span>
                     <span>GH₵{tax.toFixed(2)}</span>
                   </div>
                   <div className="divider my-3"></div>
@@ -614,14 +637,14 @@ const CheckoutForm = () => {
                     <span className="opacity-70">Subtotal</span>
                     <span>GH₵{subtotal.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="opacity-70">Shipping</span>
+                  {/* <div className="flex justify-between">
+                    <span className="opacity-70">Delivery</span>
                     <span className={shipping === 0 ? "text-success" : ""}>
                       {shipping === 0 ? "Free" : `GH₵${shipping.toFixed(2)}`}
                     </span>
-                  </div>
+                  </div> */}
                   <div className="flex justify-between">
-                    <span className="opacity-70">Tax (7%)</span>
+                    <span className="opacity-70">Tax (1.95%)</span>
                     <span>GH₵{tax.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between font-bold text-base pt-3 border-t">

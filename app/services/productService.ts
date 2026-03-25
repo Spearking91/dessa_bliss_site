@@ -3,7 +3,12 @@ import { supabase } from "@/utils/supabase/supabase_client";
 export interface Product {
   id: string;
   name: string;
-  category: string;
+  category: {
+    id: string;
+    name: string;
+    image: string;
+    created_at: string;
+  };
   description: string;
   price: number;
   discount_price: number | null;
@@ -15,21 +20,41 @@ export interface Product {
   trending: boolean | null;
   created_at: string;
   stock_quantity: number;
-
 }
+
+// ... other code
+
+// export async function getProducts(limit?: number) {
+// The important part is `select('*, categories(*)')`
 
 /**
  * Fetches a list of products with an optional limit.
  */
-export async function getProducts(limit: number = 12) {
-  return await supabase.from("products").select("*").limit(limit);
+export async function getProducts(limit?: number) {
+  let query = supabase.from("products").select("*, category:categories(*)");
+
+  if (limit) {
+    query = query.limit(limit);
+  } else {
+    query = query.range(0, 4999);
+  }
+
+  const { data, error } = await query;
+
+  return { data, error };
+
+  // return await supabase.from("products").select("*").limit(limit);
 }
 
 /**
  * Fetches a single product by its ID.
  */
 export async function getProductById(id: string) {
-  return await supabase.from("products").select("*").eq("id", id).single();
+  return await supabase
+    .from("products")
+    .select("*, category:categories(*)")
+    .eq("id", id)
+    .single();
 }
 
 /**
@@ -42,8 +67,8 @@ export async function getRelatedProducts(
 ) {
   return await supabase
     .from("products")
-    .select("*")
-    .eq("category", category)
+    .select("*, category:categories(*)")
+    .eq("category_id", category)
     .neq("id", excludeId)
     .limit(limit);
 }

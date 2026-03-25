@@ -113,7 +113,7 @@ export default function ProductDetailPage({
           {/* Info */}
           <div className="space-y-6">
             <div>
-              <div className="badge badge-outline mb-2">{product.category}</div>
+              <div className="badge badge-outline mb-2">{product.category.name}</div>
               <h1 className="text-3xl font-bold">{product.name}</h1>
             </div>
 
@@ -205,7 +205,7 @@ export default function ProductDetailPage({
               <div className="space-y-3 text-base-content/80">
                 <div>
                   <span className="font-medium">Category:</span>{" "}
-                  {product.category}
+                  {product.category.name}
                 </div>
                 {product.tags?.length > 0 && (
                   <div>

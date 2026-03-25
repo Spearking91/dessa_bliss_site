@@ -42,7 +42,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
 
     try {
       // Fetch products (limit can be adjusted as needed for global use)
-      const { data, error: supabaseError } = await getProducts(12);
+      const { data, error: supabaseError } = await getProducts();
 
       if (!isMounted.current) return;
       if (supabaseError) throw supabaseError;
@@ -110,7 +110,7 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
             lastFetchTime = Date.now();
             return updated;
           });
-        }
+        },
       )
       .subscribe();
 

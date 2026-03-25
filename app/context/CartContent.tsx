@@ -9,15 +9,7 @@ import React, {
   useCallback,
 } from "react";
 import { useToast } from "./ToastContext";
-
-interface Product {
-  id: string;
-  name: string;
-  price: number;
-  images: string[];
-  category: string;
-  stock_quantity: number;
-}
+import { Product } from "@/app/services/productService";
 
 interface CartItem {
   product: Product;

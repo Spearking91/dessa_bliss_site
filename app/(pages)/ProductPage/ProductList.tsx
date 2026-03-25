@@ -1,30 +1,34 @@
 "use client";
 import React, { useState, useMemo, useEffect } from "react";
+import { useProducts } from "@/app/context/ProductContext";
+import { colorOptions } from "@/app/data/products";
 import {
+  TrendingUp,
   SlidersHorizontal,
   Grid3x3,
   List,
   Star,
-  TrendingUp,
   AlertTriangle,
   RefreshCw,
 } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
-import { allProducts, colorOptions } from "@/app/data/products";
+import { useRouter, useSearchParams } from "next/navigation";
 import Loading from "@/app/loading";
-import { useProducts } from "@/app/context/ProductContext";
 
-export default function HomePage() {
+export const ProductList = () => {
+  const { products, isLoading, error, refreshProducts, isRetrying } =
+    useProducts();
+  const searchParams = useSearchParams();
   const [view, setView] = useState<"grid" | "list">("grid");
-  const [searchQuery] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState(
+    searchParams.get("category") || "All",
+  );
   const [sortBy, setSortBy] = useState("featured");
   const [priceRange, setPriceRange] = useState([0, 500]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const { products, isLoading, error, refreshProducts, isRetrying } =
-    useProducts();
   const [currentPage, setCurrentPage] = useState(1);
+  const searchQuery = searchParams.get("search") || "";
+  const isTrending = searchParams.get("trending") === "true";
 
   const itemsPerPage = 12;
   const router = useRouter();
@@ -33,7 +37,7 @@ export default function HomePage() {
     if (!products) return [{ id: "All", name: "All" }];
     const categoryMap = new Map<string, { id: string; name: string }>();
     products.forEach((p) => {
-      if (p.category && p.category.id && !categoryMap.has(p.category.id)) {
+      if (p.category && !categoryMap.has(p.category.id)) {
         categoryMap.set(p.category.id, {
           id: p.category.id,
           name: p.category.name,
@@ -43,22 +47,25 @@ export default function HomePage() {
     return [{ id: "All", name: "All" }, ...Array.from(categoryMap.values())];
   }, [products]);
 
-  const handleRetry = async () => {
-    await refreshProducts(true);
-  };
+  useEffect(() => {
+    const categoryFromQuery = searchParams.get("category");
+    setSelectedCategory(categoryFromQuery || "All");
+  }, [searchParams]);
 
-  // ────────────────────────────────────────────────
-  //  Filtering + Sorting (memoized)
-  // ────────────────────────────────────────────────
   const filteredProducts = useMemo(() => {
     let temp = products ? [...products] : [];
+
+    if (isTrending) {
+      temp = temp.filter((p) => p.trending);
+    }
 
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       temp = temp.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          p.category?.name?.toLowerCase().includes(q),
+          p.category?.name.toLowerCase().includes(q) ||
+          p.description?.toLowerCase().includes(q),
       );
     }
 
@@ -89,17 +96,17 @@ export default function HomePage() {
       case "popular":
         temp.sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0));
         break;
-      // featured → original order
     }
 
     return temp;
   }, [
     products,
-    searchQuery,
     selectedCategory,
     priceRange,
     selectedColors,
     sortBy,
+    searchQuery,
+    isTrending,
   ]);
 
   const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
@@ -120,6 +127,10 @@ export default function HomePage() {
   const resetFilters = () => {
     setSelectedColors([]);
     setPriceRange([0, 500]);
+  };
+
+  const handleRetry = async () => {
+    await refreshProducts(true);
   };
 
   if (isLoading) {
@@ -147,39 +158,9 @@ export default function HomePage() {
       </div>
     );
   }
-
   return (
     <div className="min-h-screen bg-base-200">
       {/* Hero */}
-      <div className="hero min-h-[55vh] relative overflow-hidden">
-        <div className="hero-overlay bg-gradient-to-br from-primary/30 via-secondary/20 to-accent/10"></div>
-        <div
-          className="absolute inset-0 bg-cover bg-center opacity-5"
-          style={{ backgroundImage: "url(/background1.jpeg)" }}
-        />
-        <div className="hero-content w-full justify-start text-center lg:text-left max-w-6xl mx-auto px-6">
-          <div className="max-w-2xl">
-            <div className="badge badge-outline badge-lg mb-6 font-bold tracking-wider">
-              NEW SEASON 2026
-            </div>
-            <h1 className="mb-5 text-5xl lg:text-7xl font-black leading-tight">
-              Discover
-              <br />
-              <span className="text-primary">Tomorrow</span>
-            </h1>
-            <p className="mb-8 text-lg opacity-80">
-              Premium disposables & diaper essentials for modern parenting
-            </p>
-            <button
-              className="btn btn-ghost bg-primary/50 btn-lg gap-3 group"
-              onClick={() => router.push("/CategoriesPage")}
-            >
-              Explore Collection
-              <TrendingUp className="group-hover:translate-x-1 transition-transform" />
-            </button>
-          </div>
-        </div>
-      </div>
 
       <main className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Category filter pills */}
@@ -252,7 +233,7 @@ export default function HomePage() {
         </div>
 
         {/* ─── FILTER DRAWER ──────────────────────────────────────── */}
-        <input type="checkbox" id="filter-drawer" className="drawer-toggle" />
+        <input type="checkbox" id="filter-drawer" className="drawer-open" />
         <div className="drawer-side z-30">
           <label htmlFor="filter-drawer" className="drawer-overlay"></label>
           <div className="p-6 w-80 bg-base-100 text-base-content">
@@ -277,8 +258,8 @@ export default function HomePage() {
                 className="range range-primary range-sm"
               />
               <div className="flex justify-between text-sm mt-2">
-                <span>₵{priceRange[0]}</span>
-                <span className="font-bold text-primary">₵{priceRange[1]}</span>
+                <span>${priceRange[0]}</span>
+                <span className="font-bold text-primary">${priceRange[1]}</span>
               </div>
             </div>
 
@@ -434,37 +415,8 @@ export default function HomePage() {
               onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
             >
               Previous
-            </button>
-
-            {[...Array(totalPages)].map((_, i) => {
-              const pageNumber = i + 1;
-              if (totalPages > 4 && pageNumber > 2 && pageNumber < totalPages) {
-                return pageNumber === 3 ? (
-                  <span key="dots" className="px-2 self-center">
-                    ...
-                  </span>
-                ) : null;
-              }
-              return (
-                <button
-                  key={pageNumber}
-                  className={`btn ${
-                    currentPage === pageNumber ? "btn-primary" : "btn-outline"
-                  }`}
-                  onClick={() => setCurrentPage(pageNumber)}
-                >
-                  {pageNumber}
-                </button>
-              );
-            })}
-
-            <button
-              className="btn btn-outline"
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            >
-              Next
             </button> */}
+
             <div className="join">
               <button
                 className="join-item btn btn-primary"
@@ -484,6 +436,14 @@ export default function HomePage() {
                 »
               </button>
             </div>
+
+            {/* <button
+              className="btn btn-outline"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            >
+              Next
+            </button> */}
           </div>
         )}
       </main>
@@ -499,4 +459,4 @@ export default function HomePage() {
       `}</style>
     </div>
   );
-}
+};

@@ -92,7 +92,7 @@ const CartClientPage = () => {
                             {item.product.name}
                           </Link>
                           <p className="text-sm text-gray-500">
-                            {item.product.category}
+                            {item.product.category.name}
                           </p>
                         </div>
                       </div>

@@ -93,9 +93,9 @@ const AdminOrders = () => {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold text-foreground">Orders</h1>
-          <p className="text-muted-foreground">
-            {orders.length} total orders {isLoading && "(Updating...)"}
-          </p>
+        <p className="text-muted-foreground">
+          {orders.length} total orders {isLoading && "(Updating...)"}
+        </p>
       </div>
 
       <div className="flex gap-4 flex-wrap">
@@ -176,7 +176,7 @@ const AdminOrders = () => {
                         </p>
                       </td>
                       <td className="text-foreground">
-                        ${(order.total_amount || 0).toFixed(2)}
+                        ₵{(order.total_amount || 0).toFixed(2)}
                       </td>
                       <td>
                         <span

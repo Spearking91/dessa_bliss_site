@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
@@ -48,10 +48,10 @@ const getCartSubtotal = (cart: PaymentData["metadata"]["cart"]) => {
 };
 
 const getShipping = (subtotal: number) => {
-  return subtotal > 100 ? 0 : 10;
+  return subtotal > 200 ? 0 : 20;
 };
 
-const OrderConfirmationPage = () => {
+const OrderConfirmationContent = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { showToast } = useToast();
@@ -167,7 +167,7 @@ const OrderConfirmationPage = () => {
   const { shipping_address, cart } = metadata;
   const subtotal = getCartSubtotal(cart);
   const shipping = getShipping(subtotal);
-  const tax = subtotal * 0.07;
+  const tax = subtotal * 0.0195;
 
   return (
     <div className="bg-base-200 min-h-screen py-12 px-4 sm:px-6 lg:px-8">
@@ -269,12 +269,12 @@ const OrderConfirmationPage = () => {
                 <span>Subtotal</span>
                 <span>GH₵{subtotal.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
-                <span>Shipping</span>
+              {/* <div className="flex justify-between text-gray-600">
+                <span>Delivery</span>
                 <span>GH₵{shipping.toFixed(2)}</span>
-              </div>
+              </div> */}
               <div className="flex justify-between text-gray-600">
-                <span>Tax (7%)</span>
+                <span>Tax (1.95%)</span>
                 <span>GH₵{tax.toFixed(2)}</span>
               </div>
               <div className="divider my-2"></div>
@@ -299,6 +299,20 @@ const OrderConfirmationPage = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const OrderConfirmationPage = () => {
+  return (
+    <Suspense
+      fallback={
+        <div className="container min-h-[70vh] flex flex-col items-center justify-center">
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        </div>
+      }
+    >
+      <OrderConfirmationContent />
+    </Suspense>
   );
 };
 
