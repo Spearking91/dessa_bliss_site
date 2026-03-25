@@ -24,7 +24,7 @@ type PaymentData = {
       };
       quantity: number;
     }[];
-    shipping_address: {
+    address_details: {
       firstName: string;
       lastName: string;
       email: string;
@@ -164,7 +164,7 @@ const OrderConfirmationContent = () => {
   }
 
   const { metadata, amount, created_at, reference } = payment;
-  const { shipping_address, cart } = metadata;
+  const { address_details, cart } = metadata;
   const subtotal = getCartSubtotal(cart);
   const shipping = getShipping(subtotal);
   const tax = subtotal * 0.0195;
@@ -201,16 +201,16 @@ const OrderConfirmationContent = () => {
             <div>
               <h3 className="font-semibold text-gray-900 mb-2">Billed To:</h3>
               <p className="text-gray-600">
-                {shipping_address.firstName} {shipping_address.lastName}
+                {address_details.firstName} {address_details.lastName}
                 <br />
-                {shipping_address.address}
+                {address_details.address}
                 <br />
-                {shipping_address.city}, {shipping_address.state}{" "}
-                {shipping_address.zipCode}
+                {address_details.city}, {address_details.state}{" "}
+                {address_details.zipCode}
                 <br />
-                {shipping_address.country}
+                {address_details.country}
                 <br />
-                {shipping_address.email}
+                {address_details.email}
               </p>
             </div>
             <div className="text-right">

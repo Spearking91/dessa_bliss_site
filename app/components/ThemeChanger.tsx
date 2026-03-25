@@ -31,12 +31,12 @@ const themes = [
   "aqua",
   "lo-Fi",
   "pastel",
-  // "fantasy",
-  // "black",
-  // "luxury",
-  // "dracula",
-  // "cmyk",
-  // "autumn",
+  "fantasy",
+  "black",
+  "luxury",
+  "dracula",
+  "cmyk",
+  "autumn",
   "business",
   "acid",
   "lemonade",
@@ -93,7 +93,7 @@ export const ThemeChanger = ({ isIcon = false }: props) => {
       )}
       <ul
         tabIndex={-1}
-        className="dropdown-content bg-base-300 rounded-box z-1 w-52 p-2 shadow-2xl"
+        className="dropdown-content bg-base-300 rounded-box z-1 w-52 p-2 shadow-2xl max-h-64 overflow-y-auto"
       >
         {themes.map((theme) => (
           <li key={theme}>

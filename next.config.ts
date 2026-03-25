@@ -1,6 +1,9 @@
 import { withNextVideo } from "next-video/process";
 import type { NextConfig } from "next";
 
+// module.exports = {
+//   allowedDevOrigins: ["192.168.8.125"],
+// };
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [

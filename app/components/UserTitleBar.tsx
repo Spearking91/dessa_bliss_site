@@ -153,7 +153,7 @@ const UserTitleBar = () => {
 
       {/* Right side - actions */}
       <div className="navbar-end gap-2 md:gap-4">
-        <ThemeChanger isIcon={true} />
+        {/* <ThemeChanger isIcon={true} /> */}
 
         {!showHomeNav && (
           <>
@@ -203,6 +203,11 @@ const UserTitleBar = () => {
               <li>
                 <Link href="/Profile" className="justify-between">
                   Profile
+                </Link>
+              </li>
+              <li>
+                <Link href="/my-orders">
+                  My Orders
                 </Link>
               </li>
               <li>

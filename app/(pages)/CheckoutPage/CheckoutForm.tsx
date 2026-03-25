@@ -129,6 +129,17 @@ const CheckoutForm = () => {
     e.preventDefault();
     setIsProcessing(true);
 
+    // Check if user is authenticated before proceeding
+    if (!user?.id) {
+      showToast(
+        "Login Required",
+        "error",
+        "Please sign in to complete your purchase and track your order journey.",
+      );
+      setIsProcessing(false);
+      return;
+    }
+
     let requiredFields: (keyof AddressFormData)[] = [
       "firstName",
       "lastName",
@@ -231,7 +242,9 @@ const CheckoutForm = () => {
       if (isVerified) {
         showToast("Payment Verified and Order Completed!", "success");
         clearCart();
-        router.push(`/order-confirmation?ref=${paystackResponse.reference}`);
+        router.push(
+          `/order-confirmation?ref=${encodeURIComponent(paystackResponse.reference)}`,
+        );
         return;
       }
 
