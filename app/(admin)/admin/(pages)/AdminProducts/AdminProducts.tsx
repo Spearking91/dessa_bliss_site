@@ -10,12 +10,14 @@ import {
   X,
   Upload,
   Loader2,
+  BellDot,
 } from "lucide-react";
 import { supabase } from "@/utils/supabase/supabase_client";
 import Image from "next/image";
 import { useToast } from "@/app/context/ToastContext";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 
 interface AdminProduct {
   id: string;
@@ -54,7 +56,8 @@ const emptyProduct = {
 };
 
 const AdminProducts = () => {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(
     null,
@@ -69,6 +72,7 @@ const AdminProducts = () => {
 
   const { user } = useAdminAuth();
   const { showToast: toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: products = [],
@@ -78,12 +82,34 @@ const AdminProducts = () => {
   } = useQuery({
     queryKey: ["admin_products"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("admin_products")
-        .select("*, category_id:categories(*)")
-        .order("created_at", { ascending: false });
-      if (error) throw new Error(error.message);
-      return (data || []) as unknown as AdminProduct[];
+      let allData: AdminProduct[] = [];
+      let from = 0;
+      const batchSize = 500;
+      const seenIds = new Set<string>(); // To track seen IDs
+
+      while (true) {
+        const { data, error } = await supabase
+          .from("admin_products")
+          .select("*, category_id:categories(*)")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false }) // Add secondary order for deterministic pagination
+          .range(from, from + batchSize - 1);
+
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) break;
+
+        const newUniqueData = (data as AdminProduct[]).filter(
+          (product) => !seenIds.has(product.id)
+        );
+        newUniqueData.forEach((product) => seenIds.add(product.id));
+        allData = [...allData, ...newUniqueData];
+        if (data.length < batchSize) break;
+
+        from += batchSize;
+        // Delay 3 seconds between batches
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      return allData as unknown as AdminProduct[];
     },
     staleTime: 1000 * 60 * 5,
   });
@@ -100,6 +126,25 @@ const AdminProducts = () => {
     },
     staleTime: 1000 * 60 * 60,
   });
+
+  // Fetch unread notifications for products
+  const { data: unreadProductRows = [] } = useQuery({
+    queryKey: ["unread_product_notifications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_audit")
+        .select("row_id, new_row, old_row")
+        .eq("table_name", "admin_products")
+        .eq("is_read", false);
+      return data || [];
+    },
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    if (urlSearch) setSearch(urlSearch);
+  }, [searchParams]);
 
   useEffect(() => {
     if (error) toast("Error", "error", (error as Error).message);
@@ -158,6 +203,21 @@ const AdminProducts = () => {
     setImageFile(null);
     setTagInput("");
     setIsFormOpen(true);
+  };
+
+  const markProductAsRead = async (productId: string) => {
+    const { error } = await supabase
+      .from("notification_audit")
+      .update({ is_read: true })
+      .eq("row_id", productId)
+      .eq("table_name", "admin_products");
+
+    if (!error) {
+      queryClient.invalidateQueries({
+        queryKey: ["unread_product_notifications"],
+      });
+      queryClient.invalidateQueries({ queryKey: ["admin_notifications"] });
+    }
   };
 
   const handleSave = async () => {
@@ -273,6 +333,35 @@ const AdminProducts = () => {
         </button>
       </div>
 
+      {/* Unread Section */}
+      {unreadProductRows.length > 0 && (
+        <div className="alert alert-secondary shadow-sm flex-col items-start gap-2 border-l-4">
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <BellDot size={16} className="animate-pulse" />
+            <span>
+              Products with Unread Changes ({unreadProductRows.length})
+            </span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto w-full pb-1">
+            {unreadProductRows.map((row: any) => (
+              <button
+                key={row.row_id}
+                className="btn btn-xs btn-ghost bg-base-100 border border-secondary/20 whitespace-nowrap"
+                onClick={() =>
+                  setSearch(
+                    row.new_row?.name || row.old_row?.name || row.row_id,
+                  )
+                }
+              >
+                {row.new_row?.name ||
+                  row.old_row?.name ||
+                  "ID: " + row.row_id.slice(0, 8)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Low stock banner */}
       {lowStockProducts.length > 0 && (
         <div className="collapse collapse-arrow bg-warning text-warning-content shadow-md rounded-box">
@@ -344,7 +433,10 @@ const AdminProducts = () => {
                 </tr>
               ) : (
                 filtered.map((product) => (
-                  <tr key={product.id} className="hover">
+                  <tr
+                    key={product.id}
+                    className={`hover ${unreadProductRows.some((r: any) => r.row_id === product.id) ? "bg-secondary/5 border-l-4 border-l-secondary" : ""}`}
+                  >
                     <td>
                       <div className="flex items-center gap-3">
                         {product.images?.[0] ? (
@@ -414,7 +506,10 @@ const AdminProducts = () => {
                     <td className="text-right pr-6">
                       <div className="flex items-center justify-end gap-1">
                         <button
-                          onClick={() => openEdit(product)}
+                          onClick={() => {
+                            openEdit(product);
+                            markProductAsRead(product.id);
+                          }}
                           className="btn btn-ghost btn-sm btn-circle tooltip"
                           data-tip="Edit"
                         >

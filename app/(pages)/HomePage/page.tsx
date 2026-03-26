@@ -269,7 +269,7 @@ export default function HomePage() {
               <input
                 type="range"
                 min={0}
-                max={500}
+                max={2000}
                 value={priceRange[1]}
                 onChange={(e) =>
                   setPriceRange([priceRange[0], Number(e.target.value)])

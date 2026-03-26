@@ -71,6 +71,10 @@ const CheckoutForm = () => {
   const tax = subtotal * 0.0195;
   const total = subtotal + shipping + tax;
 
+  useEffect(() => {
+    if (user === null) router.replace("/auth");
+  }, []);
+
   const verifyOnServer = async (ref: string) => {
     try {
       const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;

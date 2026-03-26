@@ -21,7 +21,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!authLoading && session) {
-      router.push("/HomePage");
+      router.back();
     }
   }, [session, authLoading, router]);
 
@@ -43,7 +43,8 @@ export default function Auth() {
       } else {
         showToast("Sign in successful", "success");
       }
-    } catch {
+    } catch (error) {
+      console.log("unexpected login error" + error);
       showToast("An unexpected error occurred during sign-in.", "error");
     } finally {
       setLoading(false);
@@ -75,7 +76,8 @@ export default function Auth() {
           `/auth/pending-confirmation?email=${encodeURIComponent(email)}`,
         );
       }
-    } catch {
+    } catch (error) {
+      console.log("unexpected signup error" + error);
       showToast("An unexpected error occurred during sign-up.", "error");
     } finally {
       setLoading(false);

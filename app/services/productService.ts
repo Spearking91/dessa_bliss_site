@@ -31,19 +31,43 @@ export interface Product {
  * Fetches a list of products with an optional limit.
  */
 export async function getProducts(limit?: number) {
-  let query = supabase.from("products").select("*, category:categories(*)");
-
   if (limit) {
-    query = query.limit(limit);
-  } else {
-    query = query.range(0, 4999);
+    return await supabase
+      .from("products")
+      .select("*, category:categories(*)")
+      .limit(limit);
   }
 
-  const { data, error } = await query;
+  let allData: Product[] = [];
+  let from = 0;
+  const batchSize = 500;
+  const seenIds = new Set<string>(); // To track seen IDs
 
-  return { data, error };
+  while (true) {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*, category:categories(*)")
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: false }) // Add secondary order for deterministic pagination
+      .range(from, from + batchSize - 1);
 
-  // return await supabase.from("products").select("*").limit(limit);
+    if (error) return { data: null, error };
+    if (!data || data.length === 0) break;
+
+    const newUniqueData = (data as Product[]).filter(
+      (product) => !seenIds.has(product.id),
+    );
+    newUniqueData.forEach((product) => seenIds.add(product.id));
+    allData = [...allData, ...newUniqueData];
+
+    if (data.length < batchSize) break;
+
+    from += batchSize;
+    // Wait 3 seconds before next batch as requested
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+
+  return { data: allData, error: null };
 }
 
 /**

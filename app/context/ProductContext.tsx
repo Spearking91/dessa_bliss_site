@@ -41,8 +41,49 @@ export function ProductProvider({ children }: { children: React.ReactNode }) {
     setError(null);
 
     try {
-      // Fetch products (limit can be adjusted as needed for global use)
-      const { data, error: supabaseError } = await getProducts();
+      /**
+       * Fetches a list of products with an optional limit.
+       */
+      const fetchAllProducts = async (limit?: number) => {
+        if (limit) {
+          return await supabase
+            .from("products")
+            .select("*, category:categories(*)")
+            .limit(limit);
+        }
+
+        let allData: any[] = [];
+        let from = 0;
+        const batchSize = 500;
+        const seenIds = new Set<string>(); // To track seen IDs
+
+        while (true) {
+          const { data, error } = await supabase
+            .from("products")
+            .select("*, category:categories(*)")
+            .range(from, from + batchSize - 1)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false }); // Add secondary order for deterministic pagination
+
+          if (error) return { data: null, error };
+          if (!data || data.length === 0) break;
+
+          const newUniqueData = (data as Product[]).filter(
+            (product) => !seenIds.has(product.id)
+          );
+          newUniqueData.forEach((product) => seenIds.add(product.id));
+          allData = [...allData, ...newUniqueData];
+          if (data.length < batchSize) break;
+
+          from += batchSize;
+          // Wait 3 seconds before next batch as requested
+          await new Promise((resolve) => setTimeout(resolve, 3000));
+        }
+
+        return { data: allData, error: null };
+      };
+
+      const { data, error: supabaseError } = await fetchAllProducts();
 
       if (!isMounted.current) return;
       if (supabaseError) throw supabaseError;

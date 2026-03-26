@@ -1,9 +1,11 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Search, ShoppingCart, Eye, Loader2 } from "lucide-react";
+import { Search, ShoppingCart, Eye, Loader2, BellDot } from "lucide-react";
+import Image from "next/image"; // Import Image component for product images
 import { supabase } from "@/utils/supabase/supabase_client";
 import { useToast } from "@/app/context/ToastContext";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "next/navigation";
 
 interface Order {
   id: string;
@@ -11,9 +13,24 @@ interface Order {
   status: string;
   total_amount: number;
   payment_status: string;
-  items: string[];
   notes: string | null;
   created_at: string;
+}
+
+interface OrderItem {
+  id: string;
+  order_id: string;
+  product_id: {
+    id: string;
+    name: string;
+    images: string[];
+    price: number;
+    discount_price: number | null;
+  };
+  quantity: number;
+  price_at_purchase: number;
+  // // Assuming product details will be joined from the 'products' table
+  // products: { id: string; name: string; images: string[]; price: number };
 }
 
 const statusOptions = [
@@ -34,10 +51,12 @@ const statusColors: Record<string, string> = {
 };
 
 const AdminOrders = () => {
-  const [search, setSearch] = useState("");
+  const searchParams = useSearchParams();
+  const [search, setSearch] = useState(searchParams.get("search") || "");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewOrder, setViewOrder] = useState<Order | null>(null);
   const { showToast: toast } = useToast();
+  const queryClient = useQueryClient();
 
   const {
     data: orders = [],
@@ -47,21 +66,86 @@ const AdminOrders = () => {
   } = useQuery({
     queryKey: ["admin_orders", statusFilter],
     queryFn: async () => {
-      let query = supabase
-        .from("orders")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (statusFilter !== "all") query = query.eq("status", statusFilter);
-      const { data, error } = await query;
-      if (error) throw new Error(error.message);
-      return (data || []) as unknown as Order[];
+      let allData: Order[] = [];
+      let from = 0;
+      const batchSize = 500;
+      const seenIds = new Set<string>(); // To track seen IDs
+
+      while (true) {
+        let query = supabase
+          .from("orders")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false }) // Add secondary order for deterministic pagination
+          .range(from, from + batchSize - 1);
+
+        if (statusFilter !== "all") query = query.eq("status", statusFilter);
+
+        const { data, error } = await query;
+        if (error) throw new Error(error.message);
+        if (!data || data.length === 0) break;
+
+        const newUniqueData = (data as Order[]).filter(
+          (order) => !seenIds.has(order.id)
+        );
+        newUniqueData.forEach((order) => seenIds.add(order.id));
+        allData = [...allData, ...newUniqueData];
+        if (data.length < batchSize) break;
+
+        from += batchSize;
+        // Delay 3 seconds between batches
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+      }
+      return allData as unknown as Order[];
     },
     staleTime: 1000 * 60 * 5,
   });
 
+  const {
+    data: fetchedOrderItems = [],
+    isLoading: isLoadingOrderItems,
+    error: orderItemsError,
+  } = useQuery({
+    queryKey: ["order_items", viewOrder?.id],
+    queryFn: async () => {
+      if (!viewOrder?.id) return [];
+      const { data, error } = await supabase
+        .from("order_items")
+        .select("*, product_id(*)")
+        .eq("order_id", viewOrder.id);
+      if (error) throw new Error(error.message);
+      return data as OrderItem[];
+    },
+    enabled: !!viewOrder?.id, // Only run this query if viewOrder.id exists
+  });
+
+  // Fetch unread notifications for orders to highlight them
+  const { data: unreadOrderIds = [] } = useQuery({
+    queryKey: ["unread_order_notifications"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("notification_audit")
+        .select("row_id")
+        .eq("table_name", "orders")
+        .eq("is_read", false);
+      return (data || []).map((d: any) => d.row_id);
+    },
+    refetchInterval: 30000,
+  });
+
+  useEffect(() => {
+    const urlSearch = searchParams.get("search");
+    if (urlSearch) setSearch(urlSearch);
+  }, [searchParams]);
+
   useEffect(() => {
     if (error) toast("Error", "error", (error as Error).message);
   }, [error, toast]);
+
+  useEffect(() => {
+    if (orderItemsError)
+      toast("Error", "error", (orderItemsError as Error).message);
+  }, [orderItemsError, toast]);
 
   const updateStatus = async (orderId: string, newStatus: string) => {
     const { error } = await supabase
@@ -75,6 +159,19 @@ const AdminOrders = () => {
     else {
       toast("Status updated", "success");
       refetch();
+    }
+  };
+
+  const markOrderAsRead = async (orderId: string) => {
+    const { error } = await supabase
+      .from("notification_audit")
+      .update({ is_read: true })
+      .eq("row_id", orderId)
+      .eq("table_name", "orders");
+    
+    if (!error) {
+      queryClient.invalidateQueries({ queryKey: ["unread_order_notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["admin_notifications"] });
     }
   };
 
@@ -97,6 +194,27 @@ const AdminOrders = () => {
           {orders.length} total orders {isLoading && "(Updating...)"}
         </p>
       </div>
+
+      {/* Unread Section */}
+      {unreadOrderIds.length > 0 && (
+        <div className="alert alert-info shadow-sm flex-col items-start gap-2 border-l-4">
+          <div className="flex items-center gap-2 font-bold text-sm">
+            <BellDot size={16} className="animate-pulse" />
+            <span>Orders with Unread Changes ({unreadOrderIds.length})</span>
+          </div>
+          <div className="flex gap-2 overflow-x-auto w-full pb-1">
+            {unreadOrderIds.map(id => (
+              <button 
+                key={id} 
+                className="btn btn-xs btn-ghost bg-base-100 border border-info/20 whitespace-nowrap"
+                onClick={() => setSearch(id)}
+              >
+                ID: {id.slice(0,8)}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-4 flex-wrap">
         <div className="relative max-w-sm flex-1">
@@ -162,7 +280,7 @@ const AdminOrders = () => {
                   </tr>
                 ) : (
                   filtered.map((order) => (
-                    <tr key={order.id}>
+                    <tr key={order.id} className={unreadOrderIds.includes(order.id) ? "bg-info/5 border-l-4 border-l-info" : ""}>
                       <td className="font-mono text-xs text-foreground">
                         {order.id.slice(0, 8)}...
                       </td>
@@ -207,8 +325,11 @@ const AdminOrders = () => {
                       </td>
                       <td className="text-right">
                         <button
-                          className="btn btn-ghost rounded-full"
-                          onClick={() => setViewOrder(order)}
+                          className={`btn btn-ghost btn-circle ${unreadOrderIds.includes(order.id) ? 'text-info' : ''}`}
+                          onClick={() => {
+                            setViewOrder(order);
+                            markOrderAsRead(order.id);
+                          }}
                         >
                           <Eye className="h-4 w-4" />
                         </button>
@@ -290,16 +411,69 @@ const AdminOrders = () => {
                 <div className="col-span-2">
                   <span className="text-muted-foreground">Total</span>
                   <p className="text-lg font-bold text-foreground">
-                    ${(viewOrder.total_amount || 0).toFixed(2)}
+                    GH₵{(viewOrder.total_amount || 0).toFixed(2)}
                   </p>
                 </div>
               </div>
+
               {viewOrder.notes && (
                 <div>
                   <span className="text-sm text-muted-foreground">Notes</span>
                   <p className="text-foreground">{viewOrder.notes}</p>
                 </div>
               )}
+
+              <div className="divider">Order Items</div>
+              <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                {isLoadingOrderItems ? (
+                  <div className="flex flex-col items-center py-4 gap-2">
+                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <span className="text-xs opacity-50">Loading items...</span>
+                  </div>
+                ) : fetchedOrderItems.length === 0 ? (
+                  <div className="text-center py-4">
+                    <p className="text-sm opacity-50">
+                      No items found for this order.
+                    </p>
+                  </div>
+                ) : (
+                  fetchedOrderItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-3 bg-base-200/50 p-2 rounded-xl"
+                    >
+                      <div className="avatar">
+                        <div className="w-12 h-12 rounded-lg bg-base-300 relative overflow-hidden">
+                          <Image
+                            src={
+                              item.product_id?.images?.[0] ||
+                              "/placeholder-image.png"
+                            }
+                            alt={item.product_id?.name || "Product"}
+                            fill
+                            className="object-cover"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-sm truncate">
+                          {item.product_id?.name || "Unknown Product"}
+                        </p>
+                        <p className="text-xs opacity-60">
+                          Qty: {item.quantity} × GH₵
+                          {item.price_at_purchase.toFixed(2)}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-sm text-primary">
+                          GH₵
+                          {(item.quantity * item.price_at_purchase).toFixed(2)}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
             <div className="modal-action">
               <button className="btn" onClick={() => setViewOrder(null)}>

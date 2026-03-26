@@ -4,6 +4,8 @@ import { usePathname } from "next/navigation";
 import { AdminAuthProvider } from "@/app/context/AdminAuthContext";
 import AdminSidebar from "./components/AdminSidebar";
 import AdminProtectedRoute from "./components/AdminProtectedRoute";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useState } from "react";
 
 export default function AdminLayout({
   children,
@@ -18,13 +20,16 @@ export default function AdminLayout({
     "/admin/unauthorized",
     "/admin/AdminLoginPage/pending-admin-confirmation",
   ].includes(pathname);
-
+const [queryClient] = useState(() => new QueryClient());
   return (
+    
+      <QueryClientProvider client={queryClient}>
     <AdminAuthProvider>
       {isPublicPage ? (
         <>{children}</>
       ) : (
-        <AdminProtectedRoute>
+
+     <AdminProtectedRoute>
           <div className="flex min-h-screen bg-background">
             <AdminSidebar>
               <main className="flex-1 overflow-auto">
@@ -35,5 +40,6 @@ export default function AdminLayout({
         </AdminProtectedRoute>
       )}
     </AdminAuthProvider>
+     </QueryClientProvider>
   );
 }

@@ -8,7 +8,12 @@ export const FooterBar = () => {
     <>
       <footer className="footer sm:footer-horizontal bg-base-300 text-base-content p-10">
         <aside>
-          <Image src={"/logo2.svg"} alt={""} width={200} height={200} />
+          <Image
+            src={"/logo2.svg"}
+            alt={"Dessa Bliss"}
+            width={200}
+            height={200}
+          />
           <p>
             Dessa Bliss Disposables
             <br />

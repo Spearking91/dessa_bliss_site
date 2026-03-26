@@ -1,19 +1,15 @@
 // "use client";
 // import { LogOut, Shield, ChevronLeft, ChevronRight } from "lucide-react";
-
 // import { cn } from "@/lib/utils";
 // import { useState } from "react";
-
 // import { usePathname } from "next/navigation";
 // import Link from "next/link";
 // import { useAdminAuth } from "@/app/context/AdminAuthContext";
 // import { navItems, ROLE_HIERARCHY } from "../config";
-
 // const AdminSidebar = () => {
 //   const pathname = usePathname();
 //   const { role, signOut, user } = useAdminAuth();
 //   const [collapsed, setCollapsed] = useState(false);
-
 //   const hasAccess = (requiredRoles: string[]) => {
 //     if (!role) return false;
 //     const minRequired = Math.min(
@@ -23,7 +19,6 @@
 //     );
 //     return ROLE_HIERARCHY[role] >= minRequired;
 //   };
-
 //   return (
 //     <aside
 //       className={cn(
@@ -50,7 +45,6 @@
 //           )}
 //         </button>
 //       </div>
-
 //       {/* Navigation */}
 //       <nav className="flex-1 p-2 space-y-1">
 //         {navItems
@@ -76,7 +70,6 @@
 //             );
 //           })}
 //       </nav>
-
 //       {/* User & Logout */}
 //       <div className="p-4 border-t border-border space-y-2">
 //         {!collapsed && (
@@ -102,21 +95,47 @@
 //     </aside>
 //   );
 // };
-
 // export default AdminSidebar;
 
 "use client";
-import { LogOut, Shield, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState } from "react";
-import { usePathname } from "next/navigation";
+import {
+  LogOut,
+  Shield,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  Loader2,
+} from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAdminAuth } from "@/app/context/AdminAuthContext";
 import { navItems, ROLE_HIERARCHY } from "../config";
+import { supabase } from "@/utils/supabase/supabase_client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/app/context/ToastContext";
+
+interface NotificationAudit {
+  id: string;
+  created_at: string;
+  table_name: string;
+  operation: string;
+  actor_user_id: string;
+  row_id: string;
+  old_row: any;
+  new_row: any;
+  is_read: boolean; // Assuming this column is added for read status
+}
 
 const AdminSidebar = ({ children }: { children: React.ReactNode }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const { role, signOut, user } = useAdminAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const { showToast } = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const hasAccess = (requiredRoles: string[]) => {
     if (!role) return false;
@@ -126,6 +145,160 @@ const AdminSidebar = ({ children }: { children: React.ReactNode }) => {
       ),
     );
     return ROLE_HIERARCHY[role] >= minRequired;
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setNotificationsOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch notifications for the current user
+  const {
+    data: notifications = [],
+    isLoading: isLoadingNotifications,
+    error: notificationsError,
+    refetch: refetchNotifications,
+  } = useQuery<NotificationAudit[]>({
+    queryKey: ["admin_notifications", user?.id],
+    queryFn: async () => {
+      if (!user?.id) return [];
+      const { data, error } = await supabase
+        .from("notification_audit")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(10); // Get latest 10 notifications
+
+      if (error) throw new Error(error.message);
+      return data || [];
+    },
+    enabled: !!user?.id,
+    staleTime: 1000 * 60, // 1 minute stale time
+  });
+
+  // Count unread notifications
+  const unreadCount = notifications.filter((n) => !n.is_read).length;
+
+  useEffect(() => {
+    if (notificationsError) {
+      showToast(
+        "Error fetching notifications",
+        "error",
+        notificationsError.message,
+      );
+    }
+  }, [notificationsError, showToast]);
+
+  // Realtime subscription for new notifications
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`notification_audit_channel_${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notification_audit",
+        },
+        (payload) => {
+          console.log("New notification received:", payload);
+          queryClient.invalidateQueries({
+            queryKey: ["admin_notifications", user.id],
+          });
+          showToast("New Activity!", "info", "You have new admin activity.");
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [user?.id, queryClient, showToast]);
+
+  const getNotificationMessage = (notification: NotificationAudit) => {
+    const { table_name, operation, new_row, old_row } = notification;
+    let entityName = notification.row_id.substring(0, 8); // Fallback to truncated ID
+
+    if (table_name === "admin_products") {
+      entityName = new_row?.name || old_row?.name || entityName;
+      return `Product "${entityName}" was ${operation.toLowerCase()}.`;
+    } else if (table_name === "orders") {
+      entityName = new_row?.id || old_row?.id || entityName;
+      const customerName =
+        new_row?.shipping_address?.firstName ||
+        old_row?.shipping_address?.firstName ||
+        "a customer";
+      return `Order "${entityName.substring(0, 8)}..." for ${customerName} was ${operation.toLowerCase()}.`;
+    }
+    return `An item in ${table_name} was ${operation.toLowerCase()}.`;
+  };
+
+  const handleNotificationClick = async (notification: NotificationAudit) => {
+    // Mark specific notification as read if it's not
+    // if (!notification.is_read) {
+    //   const { error } = await supabase
+    //     .from("notification_audit")
+    //     .update({ is_read: true })
+    //     .eq("id", notification.id);
+
+    //   if (!error) {
+    //     queryClient.invalidateQueries({ queryKey: ["admin_notifications", user?.id] });
+    //   }
+    // }
+
+    // Redirect based on table
+    let targetPath = "";
+    let searchParam = "";
+
+    if (notification.table_name === "orders") {
+      targetPath = "/admin/AdminOrders";
+      searchParam = notification.row_id;
+    } else if (notification.table_name === "admin_products") {
+      targetPath = "/admin/AdminProducts";
+      searchParam = notification.new_row?.name || notification.old_row?.name || notification.row_id;
+    }
+
+    if (targetPath) {
+      router.push(`${targetPath}?search=${encodeURIComponent(searchParam)}`);
+      setNotificationsOpen(false);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    const unreadNotificationIds = notifications
+      .filter((n) => !n.is_read)
+      .map((n) => n.id);
+
+    if (unreadNotificationIds.length === 0) {
+      showToast("No unread notifications", "info");
+      return;
+    }
+
+    const { error } = await supabase
+      .from("notification_audit")
+      .update({ is_read: true })
+      .in("id", unreadNotificationIds);
+
+    if (error) {
+      showToast("Error marking notifications as read", "error", error.message);
+    } else {
+      queryClient.invalidateQueries({
+        queryKey: ["admin_notifications", user.id],
+      });
+      showToast("Notifications marked as read", "success");
+    }
   };
 
   return (
@@ -162,6 +335,70 @@ const AdminSidebar = ({ children }: { children: React.ReactNode }) => {
             <div className="flex items-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
               <span className="hidden sm:inline">Admin Panel</span>
+            </div>
+          </div>
+
+          {/* Notification Section */}
+          <div className="flex-none">
+            <div
+              className={`dropdown dropdown-end ${notificationsOpen ? "dropdown-open" : ""}`}
+              ref={dropdownRef}
+            >
+              <div
+                tabIndex={0}
+                role="button"
+                className="btn btn-ghost btn-circle"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <div className="indicator">
+                  <Bell size={22} />
+                  {unreadCount > 0 && (
+                    <span className="badge badge-sm badge-primary indicator-item">
+                      {unreadCount}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <ul
+                tabIndex={0}
+                className="menu menu-sm dropdown-content mt-3 z-[100] p-2 shadow bg-base-100 rounded-box w-80 max-h-96 overflow-y-auto"
+              >
+                <li className="menu-title flex justify-between items-center">
+                  <span>Notifications</span>
+                  {unreadCount > 0 && (
+                    <button
+                      className="btn btn-xs btn-ghost text-primary"
+                      onClick={markAllAsRead}
+                      disabled={isLoadingNotifications}
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </li>
+                {isLoadingNotifications ? (
+                  <li className="text-center py-4">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto" />
+                    <span className="text-xs opacity-70">Loading...</span>
+                  </li>
+                ) : notifications.length === 0 ? (
+                  <li className="text-center py-4 text-muted-foreground text-sm">
+                    No new notifications.
+                  </li>
+                ) : (
+                  notifications.map((notification) => (
+                      <li key={notification.id} onClick={() => handleNotificationClick(notification)}>
+                        <a className={`flex flex-col items-start text-wrap ${!notification.is_read ? 'bg-base-200 font-medium border-l-4 border-primary' : ''}`}>
+                        <span className="text-xs font-semibold">
+                          {getNotificationMessage(notification)}
+                        </span>
+                        <span className="text-xs opacity-70">
+                          {new Date(notification.created_at).toLocaleString()}
+                        </span>
+                      </a>
+                    </li>
+                  ))
+                )}
+              </ul>
             </div>
           </div>
         </nav>
