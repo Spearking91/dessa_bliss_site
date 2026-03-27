@@ -30,17 +30,23 @@ export interface Product {
 /**
  * Fetches a list of products with an optional limit.
  */
-export async function getProducts(limit?: number) {
+export async function getProducts(
+  limit?: number,
+  onBatchFetched?: (batch: Product[]) => void,
+) {
   if (limit) {
-    return await supabase
+    const response = await supabase
       .from("products")
       .select("*, category:categories(*)")
       .limit(limit);
+    if (response.data && onBatchFetched)
+      onBatchFetched(response.data as Product[]);
+    return response;
   }
 
   let allData: Product[] = [];
   let from = 0;
-  const batchSize = 500;
+  const batchSize = 20;
   const seenIds = new Set<string>(); // To track seen IDs
 
   while (true) {
@@ -58,13 +64,18 @@ export async function getProducts(limit?: number) {
       (product) => !seenIds.has(product.id),
     );
     newUniqueData.forEach((product) => seenIds.add(product.id));
+
+    if (onBatchFetched && newUniqueData.length > 0) {
+      onBatchFetched(newUniqueData);
+    }
+
     allData = [...allData, ...newUniqueData];
 
     if (data.length < batchSize) break;
 
     from += batchSize;
-    // Wait 3 seconds before next batch as requested
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+    // Wait 3 seconds before next batch
+    await new Promise((resolve) => setTimeout(resolve, 30000));
   }
 
   return { data: allData, error: null };

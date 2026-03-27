@@ -65,7 +65,7 @@ const AdminOrders = () => {
     refetch,
   } = useQuery({
     queryKey: ["admin_orders", statusFilter],
-    queryFn: async () => {
+    queryFn: async ({ queryKey }) => {
       let allData: Order[] = [];
       let from = 0;
       const batchSize = 500;
@@ -75,7 +75,7 @@ const AdminOrders = () => {
         let query = supabase
           .from("orders")
           .select("*")
-          .order("created_at", { ascending: false })
+          .order("created_at", { ascending: true })
           .order("id", { ascending: false }) // Add secondary order for deterministic pagination
           .range(from, from + batchSize - 1);
 
@@ -90,6 +90,12 @@ const AdminOrders = () => {
         );
         newUniqueData.forEach((order) => seenIds.add(order.id));
         allData = [...allData, ...newUniqueData];
+
+        // Update the query cache incrementally so the UI can show the first batch immediately
+        if (allData.length > 0) {
+          queryClient.setQueryData(queryKey, allData);
+        }
+
         if (data.length < batchSize) break;
 
         from += batchSize;

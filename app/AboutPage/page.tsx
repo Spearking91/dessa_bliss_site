@@ -1,5 +1,10 @@
 import { ShieldCheck, Truck, Headphones, Heart } from "lucide-react";
+import { Metadata } from "next";
 import Image from "next/image";
+
+export const metadata: Metadata = {
+  title: "About Us"
+}
 
 const values = [
   {
