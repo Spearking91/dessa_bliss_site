@@ -46,7 +46,7 @@ export async function getProducts(
 
   let allData: Product[] = [];
   let from = 0;
-  const batchSize = 20;
+  const batchSize = 500;
   const seenIds = new Set<string>(); // To track seen IDs
 
   while (true) {
@@ -75,7 +75,7 @@ export async function getProducts(
 
     from += batchSize;
     // Wait 3 seconds before next batch
-    await new Promise((resolve) => setTimeout(resolve, 30000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
   }
 
   return { data: allData, error: null };
