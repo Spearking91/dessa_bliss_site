@@ -96,6 +96,14 @@ export const ProductList = () => {
       case "popular":
         temp.sort((a, b) => (b.reviews ?? 0) - (a.reviews ?? 0));
         break;
+        case "featured":
+      default:
+        temp.sort((a, b) => {
+          const trendA = a.trending ? 1 : 0;
+          const trendB = b.trending ? 1 : 0;
+          if (trendA !== trendB) return trendB - trendA;
+          return a.name.localeCompare(b.name);
+        });
     }
 
     return temp;
