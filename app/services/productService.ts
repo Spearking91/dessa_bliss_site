@@ -38,6 +38,8 @@ export async function getProducts(
     const response = await supabase
       .from("products")
       .select("*, category:categories(*)")
+      .order("trending", { ascending: false })
+      .order("name", { ascending: true })
       .limit(limit);
     if (response.data && onBatchFetched)
       onBatchFetched(response.data as Product[]);
@@ -53,8 +55,9 @@ export async function getProducts(
     const { data, error } = await supabase
       .from("products")
       .select("*, category:categories(*)")
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false }) // Add secondary order for deterministic pagination
+      .order("trending", { ascending: false })
+      .order("name", { ascending: true })
+      .order("id", { ascending: true }) // Add secondary order for deterministic pagination
       .range(from, from + batchSize - 1);
 
     if (error) return { data: null, error };

@@ -91,6 +91,7 @@ const UserTitleBar = () => {
   const handleSearchFocus = () => {
     if (pathname !== "/ProductPage") {
       router.push(`/ProductPage?search=${encodeURIComponent(searchQuery)}`);
+      setMobileMenuOpen(false);
     }
   };
 
@@ -206,9 +207,7 @@ const UserTitleBar = () => {
                 </Link>
               </li>
               <li>
-                <Link href="/my-orders">
-                  My Orders
-                </Link>
+                <Link href="/my-orders">My Orders</Link>
               </li>
               <li>
                 <button className="text-error" onClick={signOut}>
@@ -247,7 +246,8 @@ const UserTitleBar = () => {
                   type="text"
                   placeholder="Search products..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={handleSearchChange}
+                  onFocus={handleSearchFocus}
                   className="grow bg-transparent focus:outline-none"
                 />
               </label>
